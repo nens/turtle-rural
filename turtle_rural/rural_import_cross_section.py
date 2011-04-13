@@ -67,7 +67,7 @@ def main():
             log.error(input_sobek_profile_dat + " does not exist")
             sys.exit(1)
         log.debug("sobek cross section data: " + input_sobek_profile_dat)
-        
+
         # Get cross section definition file (profile.def)
         input_sobek_profile_def = os.path.join(sobek_case_folder,
             config.get('CrossSections', 'input_profile_def'))
@@ -124,13 +124,14 @@ def main():
         # ---------------------------------------------------------------------
         log.info("C-1) Write cross section defintions to database")
         output_id = config.get('CrossSections',
-                               'cross_sections_def_id').lower()# replace existing data in output_table
+                               'cross_sections_def_id').lower()
+        # replace existing data in output_table
         turtlebase.arcgis.write_result_to_output(
             output_cross_section_definition, output_id, cross_section_table)
 
         turtlebase.extract_from_sobek.write_cross_section_yz_table(
             gp, config, yz_table, output_yz_table)
-        
+
         if output_cross_section_locations != "#":
             log.info("C-2) Write cross section locations to database")
             turtlebase.extract_from_sobek.create_shapefiles(
