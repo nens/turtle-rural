@@ -87,7 +87,12 @@ UninstPage instfiles
 
 Function PythonLocationPage
 
-  ExecWait "$PYTHONDIR\pythonw.exe --version"
+  ; To test whether Python is installed, we execute "pythonw -h" to
+  ; display the command-line options. Initially we used command-line
+  ; parameter "--version" but that parameter is not supported by
+  ; Python 2.4
+
+  ExecWait "$PYTHONDIR\pythonw.exe -h"
   IfErrors clearPythonLocation setPythonLocation
 
   clearPythonLocation:
