@@ -1,6 +1,10 @@
-MAKENSIS="c:/Program Files (x86)/NSIS/makensis"
+MAKENSIS="D:/Program Files/NSIS/makensis"
 
 all: py25 py26
+
+py24: MAKE_PYTHONVERSION=2.4
+py24: MAKE_PYTHONDIR=Python24
+py24: clean create-setup
 
 py25: MAKE_PYTHONVERSION=2.5
 py25: MAKE_PYTHONDIR=Python25

@@ -50,6 +50,7 @@ Function .onInit
   ; $PLUGINSDIR will automatically be removed when the installer closes
   InitPluginsDir
   File "/oname=$PLUGINSDIR\python-location.ini" python-location.ini
+  File "/oname=$PLUGINSDIR\conflicting-packages.ini" conflicting-packages.ini
   File "/oname=$PLUGINSDIR\logo.bmp" logo.bmp
 
 FunctionEnd
@@ -76,6 +77,7 @@ FunctionEnd
 ; Pages
 
 Page custom PythonLocationPage leavePythonLocationPage
+Page custom ConflictingPackagesPage leaveConflictingPackagesPage
 Page components
 Page directory
 Page instfiles
@@ -110,7 +112,33 @@ Function leavePythonLocationPage
   Return
 
   revisitPage:
-    MessageBox MB_ICONEXCLAMATION|MB_OK	"De opgegeven directory bevat geen python installatie. Kies een andere directory of annuleer de installatie."
+    MessageBox MB_ICONEXCLAMATION|MB_OK	"De opgegeven directory bevat geen Python installatie. Kies een andere directory of annuleer de installatie."
+    Abort
+
+FunctionEnd
+
+Function ConflictingPackagesPage
+
+  ;ExecWait "$PYTHONDIR\pythonw.exe check_nens.py"
+  ;IfErrors nensInConflict
+
+  ;ExecWait "$PYTHONDIR\pythonw.exe check_turtlebase.py"
+  ;IfErrors turtlebaseInConflict
+
+  ;show:
+  InstallOptions::initDialog "$PLUGINSDIR\conflicting-packages.ini"
+  InstallOptions::show
+
+FunctionEnd
+
+Function leaveConflictingPackagesPage
+
+  ExecWait "$PYTHONDIR\pythonw.exe --version"
+  IfErrors revisitPage
+  Return
+
+  revisitPage:
+    MessageBox MB_ICONEXCLAMATION|MB_OK	"De opgegeven bibliotheken conflicteren met de installatie. Deinstalleer deze bibliotheken of annuleer de installatie."
     Abort
 
 FunctionEnd
