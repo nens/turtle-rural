@@ -5,7 +5,9 @@ Changelog of turtle-rural
 0.2 (unreleased)
 ----------------
 
-- Nothing changed yet.
+- The Windows installer now checks whether the Python libraries nens
+  and turtlebase are installed globally. If at least one of them is
+  installed globally, the user has to deinstall these libraries.
 
 
 0.1 (2011-03-30)

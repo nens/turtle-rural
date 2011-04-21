@@ -13,7 +13,7 @@ if __name__ == '__main__':
 
         exit_code = 1
     except ImportError:
-        # turtlebase is not installed, which is what we want
+        print "nens apreas to be not installed" # which is what we want
         exit_code = 0
 
     sys.exit(exit_code)

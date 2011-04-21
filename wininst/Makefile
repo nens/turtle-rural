@@ -1,4 +1,4 @@
-MAKENSIS="D:/Program Files/NSIS/makensis"
+MAKENSIS="C:/Program Files/NSIS/makensis"
 
 all: py25 py26
 

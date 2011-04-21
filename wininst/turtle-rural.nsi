@@ -114,7 +114,7 @@ FunctionEnd
 Function leavePythonLocationPage
 
   ReadINIStr $PYTHONDIR "$PLUGINSDIR\python-location.ini" "Field 2" "State"
-  ExecWait "$PYTHONDIR\pythonw.exe --version"
+  ExecWait "$PYTHONDIR\pythonw.exe -h"
   IfErrors revisitPage
   Return
 
@@ -132,13 +132,13 @@ Function ConflictingPackagesPage
  
   ExecWait "$PYTHONDIR\pythonw.exe check_nens.py"
   IfErrors +1 +2
-  StrCpy $PACKAGES "nens"
+  StrCpy $PACKAGES "- nens\n"
 
   ExecWait "$PYTHONDIR\pythonw.exe check_turtlebase.py"
   IfErrors +1 +2
-  StrCpy $PACKAGES "$PACKAGES, turtlebase"
+  StrCpy $PACKAGES "$PACKAGES- turtlebase\n"
 
-  StrCmp $PACKAGES "" show
+  StrCmp $PACKAGES "" 0 show
   Return
 
   show:
@@ -155,6 +155,7 @@ Function leaveConflictingPackagesPage
 
   ExecWait "$PYTHONDIR\pythonw.exe check_turtlebase.py"
   IfErrors revisitPage
+  Return
 
   revisitPage:
     MessageBox MB_ICONEXCLAMATION|MB_OK	"De opgegeven bibliotheken conflicteren met de installatie. Deinstalleer deze bibliotheken of annuleer de installatie."
