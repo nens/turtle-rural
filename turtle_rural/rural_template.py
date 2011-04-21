@@ -23,19 +23,20 @@ def main():
         logging_config = LoggingConfig(gp, logfile=logfile)
         mainutils.log_header(__name__)
 
-        #----------------------------------------------------------------------------------------
+        #---------------------------------------------------------------------
         # Create workspace
-        workspace = config.get('GENERAL','location_temp')
+        workspace = config.get('GENERAL', 'location_temp')
 
         turtlebase.arcgis.delete_old_workspace_gdb(gp, workspace)
 
         if not os.path.isdir(workspace):
             os.makedirs(workspace)
-        workspace_gdb, errorcode = turtlebase.arcgis.create_temp_geodatabase(gp, workspace)
+        workspace_gdb, errorcode = turtlebase.arcgis.create_temp_geodatabase(
+                                        gp, workspace)
         if errorcode == 1:
             log.error("failed to create a file geodatabase in %s" % workspace)
 
-        #----------------------------------------------------------------------------------------
+        #---------------------------------------------------------------------
         # Input parameters
         """
         nodig voor deze tool:
@@ -49,7 +50,7 @@ def main():
             log.warning("usage: <argument1> <argument2>")
             #sys.exit(1)
 
-        #----------------------------------------------------------------------------------------
+        #---------------------------------------------------------------------
         # Check geometry input parameters
         log.info("Check geometry of input parameters")
         geometry_check_list = []
@@ -61,29 +62,33 @@ def main():
         if len(geometry_check_list) > 0:
             log.error("check input: %s" % geometry_check_list)
             sys.exit(2)
-        #----------------------------------------------------------------------------------------
+        #---------------------------------------------------------------------
         # Check required fields in input data
         log.info("Check required fields in input data")
 
         missing_fields = []
 
-        #<check required fields from input data, append them to list if missing>
-        check_fields = {}#check_fields = {input_1: [fieldname1, fieldname2], input_2: [fieldname1, fieldname2]}
-        for input_fc,fieldnames in check_fields.items():
+        #<check required fields from input data,
+        #        append them to list if missing>
+        check_fields = {}
+        #check_fields = {input_1: [fieldname1, fieldname2],
+        #                 input_2: [fieldname1, fieldname2]}
+        for input_fc, fieldnames in check_fields.items():
             for fieldname in fieldnames:
-                if not turtlebase.arcgis.is_fieldname(gp, input_fc, fieldname):
-                    errormsg = "fieldname %s not available in %s" % (fieldname, input_fc)
+                if not turtlebase.arcgis.is_fieldname(
+                        gp, input_fc, fieldname):
+                    errormsg = "fieldname %s not available in %s" % (
+                                    fieldname, input_fc)
                     log.error(errormsg)
                     missing_fields.append(errormsg)
 
         if len(missing_fields) > 0:
             log.error("missing fields in input data: %s" % missing_fields)
             sys.exit(2)
-        #----------------------------------------------------------------------------------------
+        #---------------------------------------------------------------------
         # Environments
 
-        #----------------------------------------------------------------------------------------
-        #----------------------------------------------------------------------------------------
+        #---------------------------------------------------------------------
         # Delete temporary workspace geodatabase & ascii files
         try:
             log.debug("delete temporary workspace: %s" % workspace_gdb)
