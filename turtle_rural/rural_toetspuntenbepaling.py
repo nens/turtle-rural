@@ -89,7 +89,7 @@ def main():
 
         #---------------------------------------------------------------------
         # check inputfields
-        log.info("Getting commandline parameters... ")
+        log.info("Getting commandline parameters")
         if len(sys.argv) == 8:
             input_level_area_fc = sys.argv[1]
             input_level_area_table = sys.argv[2]
@@ -110,7 +110,7 @@ def main():
             sys.exit(1)
         #---------------------------------------------------------------------
         # check input parameters
-        log.info('Checking presence of input files... ')
+        log.info('Checking presence of input files')
         if not(gp.exists(input_level_area_fc)):
             log.error("inputfile peilgebieden %s does not exist!",
                       input_level_area_fc)
@@ -124,7 +124,7 @@ def main():
                       input_onderbemalingen)
             sys.exit(5)
 
-        log.info('input parameters checked... ')
+        log.info('input parameters checked')
 
         #---------------------------------------------------------------------
         # Check geometry input parameters
@@ -197,8 +197,8 @@ def main():
         #---------------------------------------------------------------------
         # Check required fields in input data
         log.info("Check required fields in input data")
-        gpgident = config.get('GENERAL', 'gpgident')
-        streefpeil = config.get('toetspunten', 'field_streefpeil')
+        gpgident = config.get('GENERAL', 'gpgident').lower()
+        streefpeil = config.get('toetspunten', 'field_streefpeil').lower()
 
         missing_fields = []
 
@@ -324,8 +324,8 @@ def main():
 
         for k, v in area_level_dict.items():
             if k in area_id_dict:
-                id_int = area_id_dict[k][id_int]
-                target_level_dict[id_int] = {'targetlevel': v[streefpeil],
+                int_id = area_id_dict[k][id_int]
+                target_level_dict[int_id] = {'targetlevel': v[streefpeil],
                                              'gpgident': k}
 
         toetspunten_fields = ["DFLT_I_ST", "DFLT_I_HL", "DFLT_I_AK",
