@@ -52,6 +52,8 @@ Function .onInit
   File "/oname=$PLUGINSDIR\python-location.ini" python-location.ini
   File "/oname=$PLUGINSDIR\conflicting-packages.ini" conflicting-packages.ini
   File "/oname=$PLUGINSDIR\logo.bmp" logo.bmp
+  File "/oname=$PLUGINSDIR\check_nens.py" check_nens.py
+  File "/oname=$PLUGINSDIR\check_turtlebase.py" check_turtlebase.py
 
 FunctionEnd
 
@@ -124,23 +126,35 @@ FunctionEnd
 
 Function ConflictingPackagesPage
 
-  ;ExecWait "$PYTHONDIR\pythonw.exe check_nens.py"
-  ;IfErrors nensInConflict
+  Var /GLOBAL PACKAGES 
 
-  ;ExecWait "$PYTHONDIR\pythonw.exe check_turtlebase.py"
-  ;IfErrors turtlebaseInConflict
+  StrCpy $PACKAGES ""
+ 
+  ExecWait "$PYTHONDIR\pythonw.exe check_nens.py"
+  IfErrors +1 +2
+  StrCpy $PACKAGES "nens"
 
-  ;show:
-  InstallOptions::initDialog "$PLUGINSDIR\conflicting-packages.ini"
-  InstallOptions::show
+  ExecWait "$PYTHONDIR\pythonw.exe check_turtlebase.py"
+  IfErrors +1 +2
+  StrCpy $PACKAGES "$PACKAGES, turtlebase"
+
+  StrCmp $PACKAGES "" show
+  Return
+
+  show:
+    WriteINIStr "$PLUGINSDIR\conflicting-packages.ini" "Field 2" "Text" $PACKAGES	
+    InstallOptions::initDialog "$PLUGINSDIR\conflicting-packages.ini"
+    InstallOptions::show
 
 FunctionEnd
 
 Function leaveConflictingPackagesPage
 
-  ExecWait "$PYTHONDIR\pythonw.exe --version"
+  ExecWait "$PYTHONDIR\pythonw.exe check_nens.py"
   IfErrors revisitPage
-  Return
+
+  ExecWait "$PYTHONDIR\pythonw.exe check_turtlebase.py"
+  IfErrors revisitPage
 
   revisitPage:
     MessageBox MB_ICONEXCLAMATION|MB_OK	"De opgegeven bibliotheken conflicteren met de installatie. Deinstalleer deze bibliotheken of annuleer de installatie."
