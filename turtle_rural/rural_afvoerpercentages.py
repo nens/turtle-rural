@@ -1,66 +1,28 @@
 # (c) Nelen & Schuurmans. GPL licensed, see LICENSE.txt
 # -*- coding: utf-8 -*-
 
-# Import system modules
-import sys
-import os
 import logging
+import sys
 import traceback
-import ConfigParser
 
-# Import GIS modules
-import arcgisscripting
+from turtlebase.logutils import LoggingConfig
+from turtlebase import mainutils
 import nens.gp
-
-# Import Turtlebase modules
 import turtlebase.arcgis
 import turtlebase.filenames
 import turtlebase.general
-from turtlebase.logutils import LoggingConfig
 
 log = logging.getLogger(__name__)
-
-def debuglogging():
-    log.debug("sys.path: %s" % sys.path)
-    log.debug("os.environ: %s" % os.environ)
-    log.debug("path turtlebase.arcgis: %s" % turtlebase.arcgis.__file__)
-    log.debug("revision turtlebase.arcgis: %s" % turtlebase.arcgis.__revision__)
-    log.debug("path turtlebase.filenames: %s" % turtlebase.filenames.__file__)
-    log.debug("path turtlebase.general: %s" % turtlebase.general.__file__)
-    log.debug("revision turtlebase.general: %s" % turtlebase.general.__revision__)
-    log.debug("path arcgisscripting: %s" % arcgisscripting.__file__)
 
 
 def main():
     try:
-        # Create the Geoprocessor object
-        gp = arcgisscripting.create()
-        gp.RefreshCatalog
-        gp.OverwriteOutput = 1
-
-        # Settings for all turtle tools
-        script_full_path = sys.argv[0] #get absolute path of running script
-        location_script = os.path.abspath(os.path.dirname(script_full_path))+"\\"
-        ini_file = location_script + 'turtle-settings.ini'
-
-        # Use configparser to read ini file
-        config = ConfigParser.SafeConfigParser()
-        config.read(ini_file)
-
-        logfile = os.path.join(config.get('GENERAL','location_temp')
-                               + config.get('GENERAL','filename_log'))
+        gp = mainutils.create_geoprocessor()
+        config = mainutils.read_config(__file__, 'turtle-settings.ini')
+        logfile = mainutils.log_filename(config)
         logging_config = LoggingConfig(gp, logfile=logfile)
+        mainutils.log_header(__name__)
 
-        debuglogging()
-        #----------------------------------------------------------------------------------------
-        #create header for logfile
-        log.info("*********************************************************")
-        log.info(__name__)
-        log.info("This python script is developed by "
-                 + "Nelen & Schuurmans B.V. and is a part of 'Turtle'")
-        log.info("*********************************************************")
-        log.info("arguments: %s" %(sys.argv))
-        #----------------------------------------------------------------------------------------
         #check inputfields
         log.info("Getting commandline parameters")
         if len(sys.argv) == 2:
@@ -94,20 +56,14 @@ def main():
         log.info(" - calculate percentages")
         percentage = config.get('afvoerpercentages', 'percentage')
         for key, value in peilgebied.items():
-            perc = 100/float(len(value))
+            perc = 100 / float(len(value))
             for kw in value:
                 afvoer_data_output[kw] = {percentage: perc}
 
-        fieldsAfvoer = {percentage: {'type': 'FLOAT'}}
-
-        log.info("C) writing to output")
+                log.info("C) writing to output")
         turtlebase.arcgis.write_result_to_output(input_afvoer, kwkident, afvoer_data_output)
-        #nens.tools_gp.writeDictToDBF_withErrorchecking(gp, os.path.dirname(input_afvoer)+'\\', os.path.basename(input_afvoer), fieldsAfvoer, afvoer_data_output, options.ini['kwk_ident'])
 
-        log.info("*********************************************************")
-        log.info("Finished")
-        log.info("*********************************************************")
-
+        mainutils.log_footer()
     except:
         log.error(traceback.format_exc())
         sys.exit(1)

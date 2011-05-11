@@ -7,11 +7,8 @@ import os
 import logging
 import shutil
 import traceback
-import ConfigParser
-import networkx
 
 # Import GIS modules
-import arcgisscripting
 import nens.gp
 
 # Import Turtlebase modules
@@ -19,13 +16,12 @@ import turtlebase.arcgis
 import turtlebase.general
 from turtle_rural import trrrlib
 from turtlebase.logutils import LoggingConfig
+from turtlebase import mainutils
 
 log = logging.getLogger(__name__)
 
-# Create the Geoprocessor object
-gp = arcgisscripting.create()
 
-def add_xy_coords(fc, xfield, yfield):
+def add_xy_coords(gp, fc, xfield, yfield):
     """add coordinates (midpoints) to level_areas (peilgebieden)
     """
     rows = gp.UpdateCursor(fc)
@@ -33,7 +29,7 @@ def add_xy_coords(fc, xfield, yfield):
         row.SetValue(xfield, row.shape.centroid.split()[0])
         row.SetValue(yfield, row.shape.centroid.split()[1])
         rows.UpdateRow(row)
-        
+
 
 def read_settings_ini(settings, header):
     """read extra settings for rrcf conversion
@@ -44,26 +40,12 @@ def read_settings_ini(settings, header):
 
 
 def main():
-    """called as console script
-    """
     try:
-        # Create the Geoprocessor object
-        gp = arcgisscripting.create()
-        gp.RefreshCatalog
-        gp.OverwriteOutput = 1
-
-        # Settings for all turtle tools
-        script_full_path = sys.argv[0] #get absolute path of running script
-        location_script = os.path.abspath(os.path.dirname(script_full_path))+"\\"
-        ini_file = location_script + 'turtle-settings.ini'
-
-        # Use configparser to read ini file
-        config = ConfigParser.SafeConfigParser()
-        config.read(ini_file)
-
-        logfile = os.path.join(config.get('GENERAL','location_temp')
-                               + config.get('GENERAL','filename_log'))
+        gp = mainutils.create_geoprocessor()
+        config = mainutils.read_config(__file__, 'turtle-settings.ini')
+        logfile = mainutils.log_filename(config)
         logging_config = LoggingConfig(gp, logfile=logfile)
+        mainutils.log_header(__name__)
 
         #----------------------------------------------------------------------------------------
         #check inputfields
@@ -73,7 +55,6 @@ def main():
         if len(sys.argv) == 8:
             peilgebieden_feature = sys.argv[1]
             rr_dataset = sys.argv[2]
-            rr_afvoer = sys.argv[3]
             afvoerkunstwerken = sys.argv[4]
             koppelpunten = sys.argv[5]
             settings = sys.argv[6]
@@ -83,24 +64,17 @@ def main():
             log.error("Usage: python rural_rrcf_conversie.py <peilgebieden_feature> <rr_dataset> <rr_afvoer> <afvoerkunstwerken> <koppelpunten> <settings>")
             sys.exit(1)
 
+        modeltype = 'RRCF'
+
         rr_dataset = rr_dataset.replace("\\", "/")
         rr_dataset = rr_dataset.replace("'", "")
         sys.argv[2] = rr_dataset
 
-        log.info("output_dir: "+output_dir)
+        log.info("output_dir: " + output_dir)
 
         #add extra logfile
-        fileHandler2 = logging.FileHandler(output_dir+'\\rrcf_convert.log')
+        fileHandler2 = logging.FileHandler(output_dir + '\\rrcf_convert.log')
         logging.getLogger("nens.turtle").addHandler(fileHandler2)
-
-        #----------------------------------------------------------------------------------------
-        #create header for logfile
-        log.info("*********************************************************")
-        log.info(__name__)
-        log.info("This python script is developed by "
-                 + "Nelen & Schuurmans B.V. and is a part of 'Turtle'")
-        log.info("*********************************************************")
-        log.info("arguments: %s" %(sys.argv))
 
         #----------------------------------------------------------------------------------------
         #default settings
@@ -112,14 +86,14 @@ def main():
         #check input parameters
         log.info('Checking presence of input files')
         if not(gp.exists(peilgebieden_feature)):
-            log.error("peilgebieden_feature "+peilgebieden_feature+" does not exist!")
+            log.error("peilgebieden_feature " + peilgebieden_feature + " does not exist!")
             sys.exit(5)
 
         #checking if feature class contains polygons
         log.info("Checking if feature contains polygons")
         pg_obj = gp.describe(peilgebieden_feature)
         if pg_obj.ShapeType != "Polygon":
-            log.error(peilgebieden_feature+" does not contain polygons, please add a feature class with polygons")
+            log.error(peilgebieden_feature + " does not contain polygons, please add a feature class with polygons")
             sys.exit(5)
 
         # add xy coordinates
@@ -130,13 +104,13 @@ def main():
             gp.addfield(peilgebieden_feature, xcoord, "Double")
         if not turtlebase.arcgis.is_fieldname(gp, peilgebieden_feature, ycoord):
             gp.addfield(peilgebieden_feature, ycoord, "Double")
-        add_xy_coords(peilgebieden_feature, xcoord, ycoord)
+        add_xy_coords(gp, peilgebieden_feature, xcoord, ycoord)
 
         #checking if feature class contains points
         if afvoerkunstwerken != "#":
             log.info("Checking if feature contains points")
             ak_obj = gp.describe(afvoerkunstwerken)
-            log.debug("ShapeType afvoerkunstwerken = "+ak_obj.ShapeType)
+            log.debug("ShapeType afvoerkunstwerken = " + ak_obj.ShapeType)
             if ak_obj.ShapeType != "Point":
                 log.error(afvoerkunstwerken + " does not contain points, please add a feature class with points")
                 sys.exit(5)
@@ -145,19 +119,19 @@ def main():
         if koppelpunten != "#":
             log.info("Checking if feature contains points")
             kp_obj = gp.describe(koppelpunten)
-            log.debug("ShapeType koppelpunten = "+kp_obj.ShapeType)
+            log.debug("ShapeType koppelpunten = " + kp_obj.ShapeType)
             if kp_obj.ShapeType != "Point":
                 log.error(koppelpunten + " does not contain points, please add a feature class with points")
                 sys.exit()
 
         #copy settings to output directory
-        shutil.copyfile(settings, output_dir+'\\RRCF_Settings.ini')
+        shutil.copyfile(settings, output_dir + '\\RRCF_Settings.ini')
 
         drainage = config.get('RR', 'drainage')
         log.info("drainage type is %s" % drainage)
 
         #export rrcf connection to output folder. Convert feature class to shape
-        output_shapefiles = output_dir+'\\shapefiles'
+        output_shapefiles = output_dir + '\\shapefiles'
         if not os.path.isdir(output_shapefiles):
             os.makedirs(output_shapefiles)
         log.debug("export rrcf connection nodes to %s" % output_shapefiles)
@@ -165,14 +139,12 @@ def main():
         gp.Select_analysis(koppelpunten, output_shapefiles + "\\rrcf_connection.shp")
         log.debug("features exported")
 
-        output_sobek = output_dir+"\\sobek_input"
+        output_sobek = output_dir + "\\sobek_input"
         if not os.path.isdir(output_sobek):
             os.makedirs(output_sobek)
 
         log.debug("from trrrlib import trrrlib")
-        parameters = sys.argv[1:6]+[settings]+[output_sobek]+[drainage]+[modeltype]
-        #log.info("parameters for trrrlib: "+str(parameters)
-        trrrlib.main({},sys.argv[1:6]+[settings]+[output_sobek]+[drainage]+[modeltype])
+        trrrlib.main({}, sys.argv[1:6] + [settings] + [output_sobek] + [drainage] + [modeltype])
         if os.path.isfile(output_sobek + "/struct.def"):
             os.remove(output_sobek + "/struct.def")
         if os.path.isfile(output_sobek + "/profile.dat"):

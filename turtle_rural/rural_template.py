@@ -3,6 +3,7 @@
 
 import logging
 import sys
+import os
 import traceback
 
 from turtlebase.logutils import LoggingConfig

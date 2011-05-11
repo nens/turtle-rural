@@ -1,34 +1,18 @@
 # (c) Nelen & Schuurmans. GPL licensed, see LICENSE.txt
 # -*- coding: utf-8 -*-
 
-# Import system modules
+import logging
 import sys
 import os
-import logging
 import traceback
-import ConfigParser
 
-# Import GIS modules
-import arcgisscripting
+from turtlebase.logutils import LoggingConfig
+from turtlebase import mainutils
 import nens.gp
-
-# Import Turtlebase modules
 import turtlebase.arcgis
 import turtlebase.general
-from turtlebase.logutils import LoggingConfig
 
 log = logging.getLogger(__name__)
-
-
-def debuglogging():
-    log.debug("sys.path: %s" % sys.path)
-    log.debug("os.environ: %s" % os.environ)
-    log.debug("path turtlebase.arcgis: %s" % turtlebase.arcgis.__file__)
-    log.debug("revision turtlebase.arcgis: %s" % turtlebase.arcgis.__revision__)
-    log.debug("path turtlebase.general: %s" % turtlebase.general.__file__)
-    log.debug("revision turtlebase.general: %s" % turtlebase.general.__revision__)
-    log.debug("path arcgisscripting: %s" % arcgisscripting.__file__)
-
 
 class ernst:
     names = []
@@ -41,31 +25,31 @@ class ernst:
     names.append('>3.5 kwel')
     #[ALFA_LZ] = max(formula_a * [DL] + formula_b, 25)
     boundaries = []
-    boundaries.append({'level_min': -100, 'level_max': -0.5, 'formula_a': 192.19, 'formula_b': -96.19})
-    boundaries.append({'level_min': -0.5, 'level_max': 0.25, 'formula_a': 160.38, 'formula_b': -79.83})
-    boundaries.append({'level_min': 0.25, 'level_max': 0.75, 'formula_a': 147.24, 'formula_b': -72.84})
-    boundaries.append({'level_min': 0.75, 'level_max': 1.25, 'formula_a': 136.86, 'formula_b': -67.62})
-    boundaries.append({'level_min': 1.25, 'level_max': 1.75, 'formula_a': 127.56, 'formula_b': -62.67})
-    boundaries.append({'level_min': 1.75, 'level_max': 3.5 , 'formula_a': 119.36, 'formula_b': -58.41})
-    boundaries.append({'level_min': 3.5,  'level_max': 100 , 'formula_a': 86    , 'formula_b': -40.99})
+    boundaries.append({'level_min':-100, 'level_max':-0.5, 'formula_a': 192.19, 'formula_b':-96.19})
+    boundaries.append({'level_min':-0.5, 'level_max': 0.25, 'formula_a': 160.38, 'formula_b':-79.83})
+    boundaries.append({'level_min': 0.25, 'level_max': 0.75, 'formula_a': 147.24, 'formula_b':-72.84})
+    boundaries.append({'level_min': 0.75, 'level_max': 1.25, 'formula_a': 136.86, 'formula_b':-67.62})
+    boundaries.append({'level_min': 1.25, 'level_max': 1.75, 'formula_a': 127.56, 'formula_b':-62.67})
+    boundaries.append({'level_min': 1.75, 'level_max': 3.5 , 'formula_a': 119.36, 'formula_b':-58.41})
+    boundaries.append({'level_min': 3.5, 'level_max': 100 , 'formula_a': 86, 'formula_b':-40.99})
 
     #drooglegging (meters)
     def calc_dl(self, maaiveld_hoogte, winterpeil, zomerpeil):
-        return maaiveld_hoogte-max(winterpeil, zomerpeil)
+        return maaiveld_hoogte - max(winterpeil, zomerpeil)
 
     #drainage (dagen)
     def calc_alfa(self, kwel, drooglegging):
         for b in self.boundaries:
             if ((kwel >= b['level_min']) and (kwel < b['level_max'])):
-                return max(b['formula_a']*drooglegging+b['formula_b'], 25)
+                return max(b['formula_a'] * drooglegging + b['formula_b'], 25)
         return 25 #no match
 
     def name(self, class_id):
-        return names[class_id]
+        return self.names[class_id]
 
 
-def sort_area_rev(x,y):
-    return int(y['area']-x['area']) #it sorts "roughly-correct", because we must return an int
+def sort_area_rev(x, y):
+    return int(y['area'] - x['area']) #it sorts "roughly-correct", because we must return an int
 
 
 def sum_grondsoort(l):
@@ -77,37 +61,15 @@ def sum_grondsoort(l):
 
 def main():
     try:
-        # Create the Geoprocessor object
-        gp = arcgisscripting.create()
-        gp.RefreshCatalog
-        gp.OverwriteOutput = 1
-
-        # Settings for all turtle tools
-        script_full_path = sys.argv[0] #get absolute path of running script
-        location_script = os.path.abspath(os.path.dirname(script_full_path))+"\\"
-        ini_file = location_script + 'turtle-settings.ini'
-
-        # Use configparser to read ini file
-        config = ConfigParser.SafeConfigParser()
-        config.read(ini_file)
-
-        logfile = os.path.join(config.get('GENERAL','location_temp')
-                               + config.get('GENERAL','filename_log'))
+        gp = mainutils.create_geoprocessor()
+        config = mainutils.read_config(__file__, 'turtle-settings.ini')
+        logfile = mainutils.log_filename(config)
         logging_config = LoggingConfig(gp, logfile=logfile)
-
-        debuglogging()
-        #----------------------------------------------------------------------------------------
-        #create header for logfile
-        log.info("*********************************************************")
-        log.info(__name__)
-        log.info("This python script is developed by "
-                 + "Nelen & Schuurmans B.V. and is a part of 'Turtle'")
-        log.info("*********************************************************")
-        log.info("arguments: %s" %(sys.argv))
+        mainutils.log_header(__name__)
 
         #----------------------------------------------------------------------------------------
         # Create workspace
-        workspace = config.get('GENERAL','location_temp')
+        workspace = config.get('GENERAL', 'location_temp')
 
         turtlebase.arcgis.delete_old_workspace_gdb(gp, workspace)
 
@@ -120,7 +82,6 @@ def main():
         #----------------------------------------------------------------------------------------
         #ernst rekenklasse
         ernst_drainage = ernst()
-
 
         #----------------------------------------------------------------------------------------
         #check inputfields
@@ -230,7 +191,6 @@ def main():
 
         # ---------------------------------------------------------------------------
         #B: ernst parameters
-        record_count = {}
 
         #inlezen van shape files: [ZOMERPEIL, WINTERPEIL, KWELSTROOM, MV_HGT_50]
         log.info("B-1) Reading inputfile peilvakgegevens")
@@ -244,10 +204,10 @@ def main():
             data_set[field_id]['winterpeil'] = item.GetValue(config.get('Ernst', 'peilvakgegevens_winterpeil'))
 
             if (data_set[field_id]['zomerpeil'] < float(config.get('Ernst', 'validate_min_zomerpeil'))) or (data_set[field_id]['zomerpeil'] > float(config.get('Ernst', 'validate_max_zomerpeil'))):
-                log.error("zomerpeil has a non-valid value of "+str(data_set[field_id]['zomerpeil']))
+                log.error("zomerpeil has a non-valid value of " + str(data_set[field_id]['zomerpeil']))
                 sys.exit(5)
             if (data_set[field_id]['winterpeil'] < float(config.get('Ernst', 'validate_min_winterpeil'))) or (data_set[field_id]['zomerpeil'] > float(config.get('Ernst', 'validate_max_winterpeil'))):
-                log.error("winterpeil has a non-valid value of "+str(data_set[field_id]['winterpeil']))
+                log.error("winterpeil has a non-valid value of " + str(data_set[field_id]['winterpeil']))
                 sys.exit(5)
 
         #inlezen van shape files: [ZOMERPEIL, WINTERPEIL, KWELSTROOM, MV_HGT_50]
@@ -256,7 +216,7 @@ def main():
         for item in nens.gp.gp_iterator(row):
             field_id = item.GetValue(peilgebied_id)
             if not(data_set.has_key(field_id)):
-                log.error("non-matching kwelstroom and peilvakgegevens, check if peilvakgegevens has key '"+field_id+"'")
+                log.error("non-matching kwelstroom and peilvakgegevens, check if peilvakgegevens has key '" + field_id + "'")
                 sys.exit(9)
             data_set[field_id]['kwel'] = item.GetValue(config.get('Ernst', 'kwelstroom_kwelstroom'))
 
@@ -266,14 +226,14 @@ def main():
         for item in nens.gp.gp_iterator(row):
             field_id = item.GetValue(peilgebied_id)
             if not(data_set.has_key(field_id)):
-                log.error("non-matching maaiveldkarakteristiek and peilvakgegevens, check if peilvakgegevens has key '"+field_id+"'")
+                log.error("non-matching maaiveldkarakteristiek and peilvakgegevens, check if peilvakgegevens has key '" + field_id + "'")
                 sys.exit(9)
             data_set[field_id]['maaiveld'] = item.GetValue(config.get('Ernst', 'maaiveldkarakteristiek_value'))
 
         # ---------------------------------------------------------------------------
         #check input: each record should contain all fields (count: 4)
         log.info("B-4) Checking input")
-        for key,value in data_set.items():
+        for key, value in data_set.items():
             if len(value.items()) != 4:
                 log.error(key, value)
                 log.error("check if inputfiles match with eachother!")
@@ -288,25 +248,25 @@ def main():
         import time
         date_str = time.strftime("%d %B %Y %H:%M:%S")
         log.info("Calculating GRONDSOORT, drooglegging, ALFA_LZ, INF_OPWAT, OPP_AFVOER... ")
-        log.info(" - Datum-string: "+date_str)
-        for key,item in data_set.items():
+        log.info(" - Datum-string: " + date_str)
+        for key, item in data_set.items():
             #print key, item
             data_set[key]['drooglegging'] = ernst_drainage.calc_dl(item['maaiveld'], item['zomerpeil'], item['winterpeil'])
             data_set_output[key] = {}
             data_set_output[key][peilgebied_id] = key #important!
-            data_set_output[key][config.get('Ernst', 'output_alfa_lz')] = ernst_drainage.calc_alfa(data_set[key]['kwel'],data_set[key]['drooglegging'])
+            data_set_output[key][config.get('Ernst', 'output_alfa_lz')] = ernst_drainage.calc_alfa(data_set[key]['kwel'], data_set[key]['drooglegging'])
             data_set_output[key][config.get('Ernst', 'output_inf_opwat')] = 250 #of dataset['key']['ALFA_LZ']*1.5
             data_set_output[key][config.get('Ernst', 'output_opp_afvoer')] = 0.5
             grondsrt_str = ""
             try:
                 data_set_output[key][config.get('Ernst', 'output_grondsoort')] = peilv_grondsoort[key]['grondsoort'][0]['pawn_code']
                 for idx in range(min(len(peilv_grondsoort[key]['grondsoort']), 5)):
-                    grondsrt_str = grondsrt_str + str(peilv_grondsoort[key]['grondsoort'][idx]['pawn_code'])+"(" +str(int(100*peilv_grondsoort[key]['grondsoort'][idx]['area']/peilv_grondsoort[key]['area'])) + "%) "
+                    grondsrt_str = grondsrt_str + str(peilv_grondsoort[key]['grondsoort'][idx]['pawn_code']) + "(" + str(int(100 * peilv_grondsoort[key]['grondsoort'][idx]['area'] / peilv_grondsoort[key]['area'])) + "%) "
             except Exception, e:
                 log.warning(e)
-                log.warning("id "+key+" has no "+config.get('Ernst', 'output_grondsoort')+" value!")
+                log.warning("id " + key + " has no " + config.get('Ernst', 'output_grondsoort') + " value!")
                 data_set_output[key][config.get('Ernst', 'output_grondsoort')] = -1
-            source_str = "grondsrt:"+grondsrt_str+"pv:"+os.path.basename(file_input_peilvakgegevens)+" kwel:"+os.path.basename(file_input_kwelstroom)+" mv:"+os.path.basename(file_input_maaiveldkarakteristiek)
+            source_str = "grondsrt:" + grondsrt_str + "pv:" + os.path.basename(file_input_peilvakgegevens) + " kwel:" + os.path.basename(file_input_kwelstroom) + " mv:" + os.path.basename(file_input_maaiveldkarakteristiek)
             if len(source_str) > 50:
                 source_str = source_str[:50]
             data_set_output[key]['SOURCE'] = source_str
@@ -343,9 +303,6 @@ def main():
         # Write results to output table
         log.info("Write results to output table")
         turtlebase.arcgis.write_result_to_output(file_output, peilgebied_id, data_set_output)
-
-
-
         #----------------------------------------------------------------------------------------
         # Delete temporary workspace geodatabase & ascii files
         try:
@@ -356,10 +313,7 @@ def main():
         except:
             log.warning("failed to delete %s" % workspace_gdb)
 
-        log.info("*********************************************************")
-        log.info("Finished")
-        log.info("*********************************************************")
-
+        mainutils.log_footer()
     except:
         log.error(traceback.format_exc())
         sys.exit(1)

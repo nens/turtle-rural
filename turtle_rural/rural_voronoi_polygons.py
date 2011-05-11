@@ -8,7 +8,6 @@ import traceback
 
 from turtlebase.logutils import LoggingConfig
 from turtlebase import mainutils
-import nens.gp
 import turtlebase.arcgis
 import turtlebase.voronoi
 import turtlebase.general
@@ -26,7 +25,7 @@ def main():
 
         #----------------------------------------------------------------------------------------
         # Create workspace
-        workspace = config.get('GENERAL','location_temp')
+        workspace = config.get('GENERAL', 'location_temp')
 
         turtlebase.arcgis.delete_old_workspace_gdb(gp, workspace)
 
@@ -68,11 +67,11 @@ def main():
         missing_fields = []
         if not turtlebase.arcgis.is_fieldname(gp, input_calculation_points, calculation_point):
             log.debug(" - missing: %s in %s" % (calculation_point, input_calculation_points))
-            missing_fields.append("%s: %s" %(input_calculation_points, calculation_point))
+            missing_fields.append("%s: %s" % (input_calculation_points, calculation_point))
 
         if not turtlebase.arcgis.is_fieldname(gp, input_level_area, gpgident):
             log.debug(" - missing: %s in %s" % (gpgident, input_level_area))
-            missing_fields.append("%s: %s" %(input_level_area, gpgident))
+            missing_fields.append("%s: %s" % (input_level_area, gpgident))
 
         if len(missing_fields) > 0:
             log.error("missing fields in input data: %s" % missing_fields)
