@@ -11,8 +11,6 @@ from turtlebase.logutils import LoggingConfig
 from turtlebase import mainutils
 from turtle_rural import rural_convert_to_sobek
 import nens.gp
-import turtlebase.arcgis
-import turtlebase.general
 
 log = logging.getLogger(__name__)
 
@@ -78,14 +76,6 @@ def is_integer(i):
         return False
 
 
-def read_settings_ini(settings, header):
-    """Read extra settings for CF conversion
-    """
-    ini = turtlebase.general.read_ini_file(settings, header)
-    settings_ini = turtlebase.general.convert_ini_settings_to_dictionary(ini)
-    return settings_ini
-
-
 def main():
     """Console script for Turtle-rural: CF Conversion
     """
@@ -144,14 +134,13 @@ def main():
         # Check ids and names in structures
         ids_found = set()
         number_of_errors = 0
-
+        config_cf = mainutils.read_config(os.path.dirname(settings), os.path.basename(settings))
         # Check ids and names in bridge
         input_bridge = sys.argv[3]
         if input_bridge != "#":
             log.info("Check ids and names of input bridge")
-            bridge_ini = read_settings_ini(settings, 'column.bridge')
-            bridge_id = bridge_ini['id']
-            bridge_name = bridge_ini['name']
+            bridge_id = config_cf.get('column.bridge', 'id')
+            bridge_name = config_cf.get('column.bridge', 'name')
 
             number_of_warnings, ids_found = check_input_id_and_names(gp, input_bridge, bridge_id, bridge_name, ids_found)
             if number_of_warnings > 0:
@@ -167,9 +156,8 @@ def main():
         input_culvert = sys.argv[4]
         if input_culvert != "#":
             log.info("Check ids and names of input culvert")
-            culvert_ini = read_settings_ini(settings, 'column.culvert')
-            culvert_id = culvert_ini['id']
-            culvert_name = culvert_ini['name']
+            culvert_id = config_cf.get('column.culvert', 'id')
+            culvert_name = config_cf.get('column.culvert', 'name')
 
             number_of_warnings, ids_found = check_input_id_and_names(gp, input_culvert, culvert_id, culvert_name, ids_found)
             if number_of_warnings > 0:
@@ -185,9 +173,8 @@ def main():
         input_syphon = sys.argv[5]
         if input_syphon != "#":
             log.info("Check ids and names of input syphon")
-            syphon_ini = read_settings_ini(settings, 'column.syphon')
-            syphon_id = syphon_ini['id']
-            syphon_name = syphon_ini['name']
+            syphon_id = config_cf.get('column.syphon', 'id')
+            syphon_name = config_cf.get('column.syphon', 'name')
 
             number_of_warnings, ids_found = check_input_id_and_names(gp, input_syphon, syphon_id, syphon_name, ids_found)
             if number_of_warnings > 0:
@@ -203,9 +190,8 @@ def main():
         input_pump = sys.argv[6]
         if input_pump != "#":
             log.info("Check ids and names of input pump")
-            pump_ini = read_settings_ini(settings, 'column.pump')
-            pump_id = pump_ini['id']
-            pump_name = pump_ini['name']
+            pump_id = config_cf.get('column.pump', 'id')
+            pump_name = config_cf.get('column.pump', 'name')
 
             number_of_warnings, ids_found = check_input_id_and_names(gp, input_pump, pump_id, pump_name, ids_found)
             if number_of_warnings > 0:
@@ -221,9 +207,8 @@ def main():
         input_weir = sys.argv[8]
         if input_weir != "#":
             log.info("Check ids and names of input weir")
-            weir_ini = read_settings_ini(settings, 'column.weir')
-            weir_id = weir_ini['id']
-            weir_name = weir_ini['name']
+            weir_id = config_cf.get('column.weir', 'id')
+            weir_name = config_cf.get('column.weir', 'name')
 
             number_of_warnings, ids_found = check_input_id_and_names(gp, input_weir, weir_id, weir_name, ids_found)
             if number_of_warnings > 0:
@@ -239,9 +224,8 @@ def main():
         input_univw = sys.argv[9]
         if input_univw != "#":
             log.info("Check ids and names of input univw")
-            univw_ini = read_settings_ini(settings, 'column.univw')
-            univw_id = univw_ini['id']
-            univw_name = univw_ini['name']
+            univw_id = config_cf.get('column.univw', 'id')
+            univw_name = config_cf.get('column.univw', 'name')
 
             number_of_warnings, ids_found = check_input_id_and_names(gp, input_univw, univw_id, univw_name, ids_found)
             if number_of_warnings > 0:
@@ -259,9 +243,8 @@ def main():
         input_xsection = sys.argv[10]
         if input_xsection != "#":
             log.info("Check ids and names of input xsection")
-            xsection_ini = read_settings_ini(settings, 'column.xsection')
-            xsection_id = xsection_ini['id']
-            xsection_name = xsection_ini['profile_id']
+            xsection_id = config_cf.get('column.xsection', 'id')
+            xsection_name = config_cf.get('column.xsection', 'profile_id')
 
             number_of_warnings, ids_found = check_input_id_and_names(gp, input_xsection, xsection_id, xsection_name, ids_found)
             if number_of_warnings > 0:
@@ -277,9 +260,8 @@ def main():
         input_xsection = sys.argv[11]
         if input_xsection != "#":
             log.info("Check ids and names of input xsection definition")
-            xsection_ini = read_settings_ini(settings, 'column.xsection')
-            xsection_id = xsection_ini['profile_id']
-            xsection_name = xsection_ini['profile_id']
+            xsection_id = config_cf.get('column.xsection', 'profile_id')
+            xsection_name = config_cf.get('column.xsection', 'profile_id')
             ids_def_found = set()
 
             number_of_warnings, ids_found = check_input_id_and_names(gp, input_xsection, xsection_id, xsection_name, ids_def_found)
@@ -291,9 +273,8 @@ def main():
         input_waterline = sys.argv[14]
         if input_waterline != "#":
             log.info("Check ids and names of input waterline")
-            waterline_ini = read_settings_ini(settings, 'column.waterline')
-            waterline_id = waterline_ini['id']
-            waterline_name = waterline_ini['name']
+            waterline_id = config_cf.get('column.waterline', 'id')
+            waterline_name = config_cf.get('column.waterline', 'name')
 
             number_of_warnings, ids_found = check_input_id_and_names(gp, input_waterline, waterline_id, waterline_name, ids_found)
             if number_of_warnings > 0:

@@ -31,14 +31,6 @@ def add_xy_coords(gp, fc, xfield, yfield):
         rows.UpdateRow(row)
 
 
-def read_settings_ini(settings, header):
-    """read extra settings for rrcf conversion
-    """
-    ini = turtlebase.general.read_ini_file(settings, header)
-    settings_ini = turtlebase.general.convert_ini_settings_to_dictionary(ini)
-    return settings_ini
-
-
 def main():
     try:
         gp = mainutils.create_geoprocessor()
@@ -59,12 +51,11 @@ def main():
             koppelpunten = sys.argv[5]
             settings = sys.argv[6]
             output_dir = sys.argv[7]
-
         else:
             log.error("Usage: python rural_rrcf_conversie.py <peilgebieden_feature> <rr_dataset> <rr_afvoer> <afvoerkunstwerken> <koppelpunten> <settings>")
             sys.exit(1)
 
-        modeltype = 'RRCF'
+        modeltype = 'RR_CF'
 
         rr_dataset = rr_dataset.replace("\\", "/")
         rr_dataset = rr_dataset.replace("'", "")
@@ -74,7 +65,7 @@ def main():
 
         #add extra logfile
         fileHandler2 = logging.FileHandler(output_dir + '\\rrcf_convert.log')
-        logging.getLogger("nens.turtle").addHandler(fileHandler2)
+        logging.getLogger("").addHandler(fileHandler2)
 
         #----------------------------------------------------------------------------------------
         #default settings
@@ -96,15 +87,11 @@ def main():
             log.error(peilgebieden_feature + " does not contain polygons, please add a feature class with polygons")
             sys.exit(5)
 
-        # add xy coordinates
-        peilgebied_ini = read_settings_ini(settings, 'column.peilgebied')
-        xcoord = peilgebied_ini['xcoord']
-        ycoord = peilgebied_ini['ycoord']
-        if not turtlebase.arcgis.is_fieldname(gp, peilgebieden_feature, xcoord):
-            gp.addfield(peilgebieden_feature, xcoord, "Double")
-        if not turtlebase.arcgis.is_fieldname(gp, peilgebieden_feature, ycoord):
-            gp.addfield(peilgebieden_feature, ycoord, "Double")
-        add_xy_coords(gp, peilgebieden_feature, xcoord, ycoord)
+        if not turtlebase.arcgis.is_fieldname(gp, peilgebieden_feature, 'xcoord'):
+            gp.addfield(peilgebieden_feature, 'xcoord', "Double")
+        if not turtlebase.arcgis.is_fieldname(gp, peilgebieden_feature, 'ycoord'):
+            gp.addfield(peilgebieden_feature, 'ycoord', "Double")
+        add_xy_coords(gp, peilgebieden_feature, 'xcoord', 'ycoord')
 
         #checking if feature class contains points
         if afvoerkunstwerken != "#":

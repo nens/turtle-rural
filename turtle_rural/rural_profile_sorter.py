@@ -12,7 +12,6 @@ import nens.gp
 import nens.geom
 import turtlebase.arcgis
 import turtlebase.general
-import turtlebase_graph
 
 log = logging.getLogger(__name__)
 
@@ -108,10 +107,14 @@ def sort_pointcloud(gp, centerpoints_d, lineparts, pointcloud):
     for centerpoint_id, attributes in centerpoints_d.items():
         log.info(" - cross section: %s" % centerpoint_id)
         ls = lineparts[attributes['ovkident']]
-        if 'streefpeil' in attributes:
-            streefpeil = attributes['streefpeil']
+        if 'target_lvl' in attributes:
+            targetlevel = attributes['target_lvl']
         else:
-            streefpeil = -999
+            targetlevel = -999
+        if 'water_lvl' in attributes:
+            waterlevel = attributes['water_lvl']
+        else:
+            waterlevel = -999
         log.debug("ls: %s" % ls)
         pc = pointcloud[centerpoint_id]
 
@@ -129,7 +132,10 @@ def sort_pointcloud(gp, centerpoints_d, lineparts, pointcloud):
         for index, x in enumerate(abscissas):
             profiles_yz.append({"proident": centerpoint_id,
                                 "dist_mid": x[0], "bed_lvl": x[1][2],
-                                "p_order": index + 1, "streefpeil": streefpeil})
+                                "p_order": index + 1,
+                                "target_lvl": targetlevel,
+                                "water_lvl": waterlevel,
+                                })
 
     return profiles_xyz, profiles_yz
 
@@ -177,7 +183,8 @@ def write_profiles_yz(gp, profiles_yz, output_yz):
     gp.addfield(output_yz, 'DIST_MID', "DOUBLE")
     gp.addfield(output_yz, 'BED_LVL', "DOUBLE")
     gp.addfield(output_yz, 'P_ORDER', "SHORT")
-    gp.addfield(output_yz, 'STREEFPEIL', "DOUBLE")
+    gp.addfield(output_yz, 'TARGET_LVL', "DOUBLE")
+    gp.addfield(output_yz, 'WATER_LVL', "DOUBLE")
 
     rows = gp.InsertCursor(output_yz)
     for attributes in profiles_yz:
@@ -186,7 +193,8 @@ def write_profiles_yz(gp, profiles_yz, output_yz):
         row.SetValue('DIST_MID', float(attributes['dist_mid']))
         row.SetValue('BED_LVL', float(attributes['bed_lvl']))
         row.SetValue('P_ORDER', int(attributes['p_order']))
-        row.SetValue('STREEFPEIL', float(attributes['streefpeil']))
+        row.SetValue('TARGET_LVL', float(attributes['target_lvl']))
+        row.SetValue('WATER_LVL', float(attributes['water_lvl']))
 
         rows.InsertRow(row)
     del rows
@@ -225,10 +233,10 @@ def main():
             hydroline = sys.argv[2]
             output_xyz = sys.argv[3]
             output_yz = sys.argv[4]
-            output_graphs = sys.argv[5]
+            output_locations = sys.argv[5]
         else:
             log.warning("usage: <hydroline> <mpoint> <output_xyz> <output_yz>")
-            #sys.exit(1)
+            sys.exit(1)
 
         #---------------------------------------------------------------------
         # Check geometry input parameters
@@ -270,13 +278,15 @@ def main():
         log.info("Dissolving pointcloud to multipoint")
         gp.Dissolve_management(mpoint, multipoints, "PROIDENT")
 
-        centerpoints = turtlebase.arcgis.get_random_file_name(workspace_gdb)
+        if output_locations == '#':
+            output_locations = (
+                turtlebase.arcgis.get_random_file_name(workspace_gdb))
         log.info("Calculating coordinates of centerpoints")
-        create_centroids(gp, multipoints, centerpoints, 'PROIDENT')
+        create_centroids(gp, multipoints, output_locations, 'PROIDENT')
 
         centerpoints_sj = turtlebase.arcgis.get_random_file_name(workspace_gdb)
         log.info("Calculation adjacent hydrolines")
-        gp.SpatialJoin_analysis(centerpoints, hydroline, centerpoints_sj,
+        gp.SpatialJoin_analysis(output_locations, hydroline, centerpoints_sj,
                                 'JOIN_ONE_TO_ONE', "#", "#", "CLOSEST", 100)
 
         log.info("Reading center points")
@@ -295,14 +305,6 @@ def main():
         write_profiles_xyz(gp, profiles_xyz, output_xyz)
         log.info("Write yz information to output table")
         write_profiles_yz(gp, profiles_yz, output_yz)
-
-        if output_graphs != '#':
-            log.info("Creating graphs")
-            # create graphs
-            if not os.path.isdir(output_graphs):
-                os.makedirs(output_graphs)
-            turtlebase_graph.create_cross_section_graph(
-                                gp, output_yz, output_graphs)
 
         #---------------------------------------------------------------------
         # Delete temporary workspace geodatabase & ascii files
