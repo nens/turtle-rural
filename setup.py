@@ -71,6 +71,5 @@ setup(name='turtle-rural',
             'rural_convert_to_sobek = turtle_rural.rural_convert_to_sobek:script',
             'rural_import_cross_section = turtle_rural.rural_import_cross_section:main',
             'rural_plot_yz_profile = turtle_rural.rural_plot_yz_profile:main',
-            'rural_profile_sorter = turtle_rural.rural_profile_sorter:main'
           ]},
       )
