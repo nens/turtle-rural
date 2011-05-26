@@ -132,6 +132,7 @@ def main():
         turtlebase.extract_from_sobek.write_cross_section_yz_table(
             gp, config, yz_table, output_yz_table)
 
+        log.info("locations: %s", len(cross_section_locations))
         if output_cross_section_locations != "#":
             log.info("C-2) Write cross section locations to database")
             turtlebase.extract_from_sobek.create_shapefiles(

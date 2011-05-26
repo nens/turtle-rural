@@ -41,8 +41,8 @@ class ernst:
     def calc_alfa(self, kwel, drooglegging):
         for b in self.boundaries:
             if ((kwel >= b['level_min']) and (kwel < b['level_max'])):
-                return max(b['formula_a'] * drooglegging + b['formula_b'], 25)
-        return 25 #no match
+                return max(b['formula_a'] * drooglegging + b['formula_b'], 50)
+        return 50 #no match
 
     def name(self, class_id):
         return self.names[class_id]
@@ -255,7 +255,7 @@ def main():
             data_set_output[key] = {}
             data_set_output[key][peilgebied_id] = key #important!
             data_set_output[key][config.get('Ernst', 'output_alfa_lz')] = ernst_drainage.calc_alfa(data_set[key]['kwel'], data_set[key]['drooglegging'])
-            data_set_output[key][config.get('Ernst', 'output_inf_opwat')] = 250 #of dataset['key']['ALFA_LZ']*1.5
+            data_set_output[key][config.get('Ernst', 'output_inf_opwat')] = 500 #of dataset['key']['ALFA_LZ']*1.5
             data_set_output[key][config.get('Ernst', 'output_opp_afvoer')] = 0.5
             grondsrt_str = ""
             try:

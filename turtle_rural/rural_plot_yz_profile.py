@@ -12,14 +12,9 @@ from turtlebase import mainutils
 import turtlebase.arcgis
 import turtlebase.general
 import turtlebase.graph
+import nens.gp
 
 log = logging.getLogger(__name__)
-
-
-def export_profile_to_csv(profile_data):
-    """
-    exports profile data to a csv file
-    """
 
 
 def main():
@@ -48,9 +43,9 @@ def main():
         if len(sys.argv) == 3:
             log.info("Reading input parameters")
             input_yz = sys.argv[1]
-            input_locations = sys.argv[2]
-            output_workspace = sys.argv[3]
-            output_locations_lizardweb = sys.argv[4]
+            #input_locations = sys.argv[2]
+            output_workspace = sys.argv[2]
+            #output_locations_lizardweb = sys.argv[4]
         else:
             log.warning("usage: <input_yz_table> <output workspace>")
             #sys.exit(1)
@@ -66,7 +61,15 @@ def main():
         if not os.path.isdir(output_csv):
             os.makedirs(output_csv)
 
-
+        row = gp.SearchCursor(input_yz)
+        for item in nens.gp.gp_iterator(row):
+            if item.GetValue('P_ORDER') == 1:
+                turtlebase.general.add_to_csv(output_file, [('Location: %s' % item.GetValue('PROIDENT'))], "wb")
+                turtlebase.general.add_to_csv(output_file, ('Streefpeil %s' % item.GetValue('TARGET_LVL')), "ab")
+                turtlebase.general.add_to_csv(output_file, ('Gemeten waterstand: %s' % item.GetValue('WATER_LVL')), "ab")
+                turtlebase.general.add_to_csv(output_file, (''), "ab")
+                turtlebase.general.add_to_csv(output_file, ('Afstand tot midden (m)', 'Hoogte (m NAP)'), "ab")
+            turtlebase.general.add_to_csv(output_file, (item.GetValue('DIST_MID', 'BED_LVL'), "ab"))
 
         #---------------------------------------------------------------------
         # Delete temporary workspace geodatabase & ascii files

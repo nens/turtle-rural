@@ -102,9 +102,6 @@ def main():
         """
         nodig voor deze tool:
         """
-        for argv in sys.argv[1:]:
-            turtlebase.filenames.check_filename(argv)
-
         if len(sys.argv) == 5:
             input_level_area_fc = sys.argv[1]
             input_level_area_table = sys.argv[2]
