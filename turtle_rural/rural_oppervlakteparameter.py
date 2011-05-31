@@ -26,15 +26,15 @@ def conv_ha(conversion, lgn_id, ha):
     output: dictionary with 6 keys
     '''
     if conversion.has_key(lgn_id):
-        verhard = ha*float(conversion[lgn_id]['verhard_ha'])
-        onvsted = ha*float(conversion[lgn_id]['onvsted_ha'])
-        kassen = ha*float(conversion[lgn_id]['kassen_ha'])
-        onvland = ha*float(conversion[lgn_id]['onvland_ha'])
-        openwat = ha*float(conversion[lgn_id]['openwat_ha'])
+        verhard = ha * float(conversion[lgn_id]['verhard_ha'])
+        onvsted = ha * float(conversion[lgn_id]['onvsted_ha'])
+        kassen = ha * float(conversion[lgn_id]['kassen_ha'])
+        onvland = ha * float(conversion[lgn_id]['onvland_ha'])
+        openwat = ha * float(conversion[lgn_id]['openwat_ha'])
         hectares = ha
         error = False
     else:
-        log.warning("lgncode "+str(lgn_id)+" not found! Check conversiontable")
+        log.warning("lgncode " + str(lgn_id) + " not found! Check conversiontable")
         verhard = 0
         onvsted = 0
         kassen = 0
@@ -136,14 +136,14 @@ def main():
         gpgident = config.get('GENERAL', 'gpgident')
         if not turtlebase.arcgis.is_fieldname(gp, input_peilgebieden_feature, gpgident):
             log.debug(" - missing: %s in %s" % (gpgident, input_peilgebieden_feature))
-            missing_fields.append("%s: %s" %(input_peilgebieden_feature, gpgident))
+            missing_fields.append("%s: %s" % (input_peilgebieden_feature, gpgident))
 
         lgn_id = config.get('OppervlakteParameters', 'input_field_lgncode')
         conversion_fields = [lgn_id, "verhard_ha", "onvsted_ha", "kassen_ha", "onvland_ha", "openwat_ha"]
         for conversion_field in conversion_fields:
             if not turtlebase.arcgis.is_fieldname(gp, input_conversiontable_dbf, conversion_field):
                 log.debug(" - missing: %s in %s" % (conversion_field, input_conversiontable_dbf))
-                missing_fields.append("%s: %s" %(input_conversiontable_dbf, conversion_field))
+                missing_fields.append("%s: %s" % (input_conversiontable_dbf, conversion_field))
 
         if len(missing_fields) > 0:
             log.error("missing fields in input data: %s" % missing_fields)
@@ -158,7 +158,7 @@ def main():
         # 2b) intersect(lgn+peilgebieden)
         log.info("B) Intersect lgn_shape + tempfile_peilgebied -> lgn_peilgebieden")
         intersect_temp = turtlebase.arcgis.get_random_file_name(workspace_gdb)
-        gp.Intersect_analysis(temp_lgn_fc+" ;"+peilgebieden_temp, intersect_temp)
+        gp.Intersect_analysis(temp_lgn_fc + " ;" + peilgebieden_temp, intersect_temp)
 
         # 3a) Read conversiontable into memory"
         log.info("C-1) Read conversiontable into memory")
@@ -178,7 +178,7 @@ def main():
 
         output_with_area = {}
         unknown_lgn_codes = {}
-        source_str = "lgn:"+os.path.basename(input_lgn)+" pg:"+os.path.basename(input_peilgebieden_feature)
+        source_str = "lgn:" + os.path.basename(input_lgn) + " pg:" + os.path.basename(input_peilgebieden_feature)
         if len(source_str) > 50:
             source_str = source_str[:50]
         date_str = time.strftime('%x')
@@ -193,19 +193,19 @@ def main():
             #add to area
             if output_with_area.has_key(value_gpgident):
                 add_to_area, error = conv_ha(conversion, value_lgn_id, float(value_peilgeb_area))
-                for key,value in add_to_area.items(): #all relevant keys
+                for key, value in add_to_area.items(): #all relevant keys
                     output_with_area[value_gpgident][key] = float(output_with_area[value_gpgident][key]) + float(add_to_area[key])
             else:
                 output_with_area[value_gpgident], error = conv_ha(conversion, value_lgn_id, float(value_peilgeb_area))
                 output_with_area[value_gpgident][gpgident] = value_gpgident #set GPGIDENT
                 if error and not(unknown_lgn_codes.has_key(value_lgn_id)):
-                    log.warning(" - Warning: lgncode "+str(value_lgn_id)+" not known (check conversiontable)")
+                    log.warning(" - Warning: lgncode " + str(value_lgn_id) + " not known (check conversiontable)")
                     unknown_lgn_codes[value_lgn_id] = 1
             output_with_area[value_gpgident]['LGN_Bron'] = source_str
             output_with_area[value_gpgident]['LGN_Dtm'] = date_str
             calc_count = calc_count + 1
             if calc_count % 100 == 0:
-                log.info("Calculating field nr "+str(calc_count))
+                log.info("Calculating field nr " + str(calc_count))
 
         #----------------------------------------------------------------------------------------
         if input_watershape != "#":
@@ -214,7 +214,7 @@ def main():
             # 1) intersect(watershape+peilgebieden)
             log.info("- intersect water_shape + tempfile_peilgebied -> watershape_peilgebieden")
             watershape_intersect = turtlebase.arcgis.get_random_file_name(workspace_gdb)
-            gp.Intersect_analysis(input_watershape+" ;"+peilgebieden_temp, watershape_intersect)
+            gp.Intersect_analysis(input_watershape + " ;" + peilgebieden_temp, watershape_intersect)
 
             source_watershape = os.path.basename(input_watershape)
             if len(source_watershape) > 50:
@@ -233,7 +233,7 @@ def main():
                     #create new key with area
                     watershape_areas[peilgebied_id] = {'area': water_area_ha}
             #update outputtable
-            for peilgebied_id,values in output_with_area.items():
+            for peilgebied_id, values in output_with_area.items():
                 if watershape_areas.has_key(peilgebied_id):
                     output_with_area[peilgebied_id]['OPNWT_GBKN'] = watershape_areas[peilgebied_id]['area']
                     output_with_area[peilgebied_id]['GBKN_Dtm'] = date_str
@@ -264,7 +264,7 @@ def main():
             try:
                 gp.CreateTable(os.path.dirname(output_table), os.path.basename(output_table))
             except Exception, e:
-                log.error("Error: creating table "+output_table)
+                log.error("Error: creating table " + output_table)
                 log.debug(e)
                 sys.exit(14)
 
@@ -289,7 +289,7 @@ def main():
 
             log.info("workspace deleted")
         except:
-            log.warning("failed to delete %s" % workspace_gdb)
+            log.debug("failed to delete %s" % workspace_gdb)
 
         mainutils.log_footer()
     except:

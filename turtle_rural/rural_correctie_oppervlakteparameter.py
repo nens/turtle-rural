@@ -70,7 +70,7 @@ def main():
                 if (onvland + delta) > 0:
                     onvland = onvland + delta
                     log.info("Oppervlak %s voor peilvak %s aangepast." % (onvland_field, ident))
-                    opm_correc = "Oppervlak %s voor peilvak aangepast." % onvland
+                    opm_correc = "Oppervlak %s voor peilvak aangepast." % onvland_field
                 elif (onvsted + onvland + delta) > 0:
                     onvsted = onvsted + onvland + delta
                     onvland = 0

@@ -11,7 +11,7 @@ from turtlebase.logutils import LoggingConfig
 from turtlebase import mainutils
 import turtlebase.arcgis
 import turtlebase.general
-import turtlebase.graph
+import turtlebase_graph
 import nens.gp
 
 log = logging.getLogger(__name__)
@@ -55,21 +55,27 @@ def main():
 
         if not os.path.isdir(output_graphs):
             os.makedirs(output_graphs)
-        turtlebase.graph.create_cross_section_graph(
-                            gp, input_yz, output_graphs)
+        turtlebase_graph.create_cross_section_graph(gp, input_yz, output_graphs)
 
         if not os.path.isdir(output_csv):
             os.makedirs(output_csv)
 
         row = gp.SearchCursor(input_yz)
         for item in nens.gp.gp_iterator(row):
+
             if item.GetValue('P_ORDER') == 1:
-                turtlebase.general.add_to_csv(output_file, [('Location: %s' % item.GetValue('PROIDENT'))], "wb")
-                turtlebase.general.add_to_csv(output_file, ('Streefpeil %s' % item.GetValue('TARGET_LVL')), "ab")
-                turtlebase.general.add_to_csv(output_file, ('Gemeten waterstand: %s' % item.GetValue('WATER_LVL')), "ab")
-                turtlebase.general.add_to_csv(output_file, (''), "ab")
-                turtlebase.general.add_to_csv(output_file, ('Afstand tot midden (m)', 'Hoogte (m NAP)'), "ab")
-            turtlebase.general.add_to_csv(output_file, (item.GetValue('DIST_MID', 'BED_LVL'), "ab"))
+                output_file = os.path.join(output_csv, "%s.csv" % item.GetValue('PROIDENT'))
+                turtlebase.general.add_to_csv(output_file, [('Location:           ', item.GetValue('PROIDENT'))], "wb")
+                turtlebase.general.add_to_csv(output_file, [('X-coordinaat:       ', round(item.GetValue('XCOORD'), 2))], "ab")
+                turtlebase.general.add_to_csv(output_file, [('Y-coordinaat:       ', round(item.GetValue('YCOORD'), 2))], "ab")
+                turtlebase.general.add_to_csv(output_file, [('Streefpeil:         ', item.GetValue('TARGET_LVL'))], "ab")
+                turtlebase.general.add_to_csv(output_file, [('Gemeten waterstand: ', item.GetValue('WATER_LVL'))], "ab")
+                turtlebase.general.add_to_csv(output_file, [('')], "ab")
+                turtlebase.general.add_to_csv(output_file, [('Afstand tot midden (m)', 'Hoogte (m NAP)')], "ab")
+            try:
+                turtlebase.general.add_to_csv(output_file, [(round(item.GetValue('DIST_MID'), 2), round(item.GetValue('BED_LVL'), 2))], "ab")
+            except:
+                continue
 
         #---------------------------------------------------------------------
         # Delete temporary workspace geodatabase & ascii files

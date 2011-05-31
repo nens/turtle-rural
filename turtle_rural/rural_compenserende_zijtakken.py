@@ -17,29 +17,14 @@ import turtlebase.general
 log = logging.getLogger(__name__)
 
 
-def add_field_with_values_to_shapefile(gp, shapefile, field_name_to_add, lookup_field, dict_with_values):
-    ''' voegt veld toe aan shapefile en vult deze met waardes uit een dictionary met zelfde key als in lookup_field
-    De dictionary ziet er uit als [{'key': value}{'key':value3}]
-    '''
-    gp.AddField_management(shapefile, field_name_to_add, "DOUBLE")
-    #loop over de attirbute van de shapefile
-    row= gp.UpdateCursor(shapefile)
-    for item in nens.gp.gp_iterator(row):
-        unieke_id = item.getValue(lookup_field)
-        if dict_with_values.has_key(unieke_id):
-            open_water = dict_with_values[unieke_id]
-            item.setValue(field_name_to_add, open_water)
-            row.UpdateRow(item)
-
-
 def clean_up_star(gp, shapefile, field_to_clean):
     ''' in de shapefile in het te cleanen vled staan de GPGidenten met een extra ID. Deze kan verwijderd worden.
     bijv: GPG_2__45 wordt GPG_2
     '''
-    row= gp.UpdateCursor(shapefile)
+    row = gp.UpdateCursor(shapefile)
     for item in nens.gp.gp_iterator(row):
         peilgebied_unieke_id = item.getValue(field_to_clean)
-        peilgebied_spl =  peilgebied_unieke_id.split('__')
+        peilgebied_spl = peilgebied_unieke_id.split('__')
         peilgebied_id = peilgebied_spl[0]
         #replace de oude met de nieuwe id
         item.setValue(field_to_clean, peilgebied_id)
@@ -50,7 +35,7 @@ def remove_records_from_shapefile_not_in_list(gp, shapefile, field, list):
     '''Doet een loop door de attribute tabel van een shapefile. Als er in field een waarde staat die niet voorkomt in list, wordt
     het record verwijderd.
     '''
-    row= gp.UpdateCursor(shapefile)
+    row = gp.UpdateCursor(shapefile)
     for item in nens.gp.gp_iterator(row):
         common_id = item.getValue(field)
         if not common_id in list:
@@ -62,7 +47,7 @@ def bepaal_ideale_punt_bergingstak(distance_dictionary):
     ''' Per peilgebied en punt zijn de afstanden opgeslagen in een dictionary als volgt:
     {' GPG_3': {98.868766987681809: '3', 99.352822005324541: '12', 101.74889490323042: '22', 102.13297406176034: '20'}
     '''
-    list_with_best_point_ids =[]
+    list_with_best_point_ids = []
     for peilgebied in distance_dictionary:
         # beste punt is die met de maximal distance
         best_point = max(distance_dictionary[peilgebied])
@@ -106,13 +91,13 @@ def calculate_distance_between_points(dict_met_punten1, dict_met_punten2):
                     coord_x = coordinaat_spl[0]
                     coord_y = coordinaat_spl[1]
                     #bereken de afstand:
-                    x_kwadraat = math.pow(float(punt_x) - float(coord_x),2)
-                    y_kwadraat = math.pow(float(punt_y) - float(coord_y),2)
+                    x_kwadraat = math.pow(float(punt_x) - float(coord_x), 2)
+                    y_kwadraat = math.pow(float(punt_y) - float(coord_y), 2)
                     distance = math.sqrt(x_kwadraat + y_kwadraat)
                     id_in_list = id_in_list + 1
                     distance_dict[distance] = id_in_list
                 minimum_distance = min(distance_dict.keys())
-                log.debug("minimum_distance %s" %minimum_distance)
+                log.debug("minimum_distance %s" % minimum_distance)
                 #opslaan in de dictionary:
 
                 if not output_dict.has_key(peilgebied):
@@ -126,7 +111,7 @@ def calculate_distance_between_points(dict_met_punten1, dict_met_punten2):
                 minimum_distance = 200 # just assume the same value for min distance. it is total random which line will be there
                 output_dict[peilgebied][minimum_distance] = peilgebieduniekeiddeel
 
-    log.debug("output %s" %output_dict)
+    log.debug("output %s" % output_dict)
     return output_dict
 
 
@@ -139,7 +124,7 @@ def create_points_from_dict(gp, dict1, output_file, field_id):
     workspace_gdb = os.path.dirname(output_file)
     point = gp.CreateObject("POINT")
     gp.CreateFeatureClass_management(workspace_gdb, output_filename, "POINT")
-    gp.AddField(output_file, field_id,"TEXT")
+    gp.AddField(output_file, field_id, "TEXT")
     rows_ic = gp.InsertCursor(output_file)
     for key in dict1.keys():
         id = 0
@@ -152,13 +137,13 @@ def create_points_from_dict(gp, dict1, output_file, field_id):
             point.Y = float(coordinate_spl[1])
             newfeature = rows_ic.NewRow()
             newfeature.shape = point
-            newfeature.SetValue(field_id,key_pnt)
+            newfeature.SetValue(field_id, key_pnt)
             rows_ic.InsertRow(newfeature)
 
 
 def remove_records_from_shapefile_based_on_keys_in_dict(gp, shapefile, field, dict1):
     ''' als waarde in key voorkomt in de attribute tabel van de shapefile wordt het betreffende  record verwijderd '''
-    row= gp.UpdateCursor(shapefile)
+    row = gp.UpdateCursor(shapefile)
     for item in nens.gp.gp_iterator(row):
         common_id = item.getValue(field)
         if dict1.has_key(common_id):
@@ -167,13 +152,13 @@ def remove_records_from_shapefile_based_on_keys_in_dict(gp, shapefile, field, di
 
 def remove_duplicate_values_from_dictionaries(dict1, dict2):
     ''' This dictionary removes key:item combination dict1 from dict2 if keys are the same'''
-    reverse_dict1 = dict([(v,k) for (k,v) in dict1.iteritems()])
-    reverse_dict2 = dict([(v,k) for (k,v) in dict2.iteritems()])
+    reverse_dict1 = dict([(v, k) for (k, v) in dict1.iteritems()])
+    reverse_dict2 = dict([(v, k) for (k, v) in dict2.iteritems()])
 
     for key in reverse_dict1.iterkeys():
-        reverse_dict2.pop(key,None)
+        reverse_dict2.pop(key, None)
     #reverse back
-    output_dict = dict([(v,k) for (k,v) in reverse_dict2.iteritems()])
+    output_dict = dict([(v, k) for (k, v) in reverse_dict2.iteritems()])
     return output_dict
 
 
@@ -196,7 +181,7 @@ def join_dictionaries(dict1, dict2):
                 id = id + 1
                 id2 = str(key) + "__" + str(id)
                 if not outputdict.has_key(id2):
-                    outputdict[id2]=[]
+                    outputdict[id2] = []
                 outputdict[id2].append(itemdict1)
                 outputdict[id2].append(dict2[key])
 
@@ -211,7 +196,7 @@ def createLineFromPoints(gp, dict_with_points, leidingidkolom, outputfile):
     filename = os.path.basename(outputfile)
     workspace_gdb = os.path.dirname(outputfile)
     gp.CreateFeatureClass_management(workspace_gdb, filename, "POLYLINE")
-    gp.AddField(outputfile, leidingidkolom,"TEXT")
+    gp.AddField(outputfile, leidingidkolom, "TEXT")
     rows_ic = gp.InsertCursor(outputfile)
     for key in dict_with_points.iterkeys():
         for item in dict_with_points[key]:
@@ -221,43 +206,37 @@ def createLineFromPoints(gp, dict_with_points, leidingidkolom, outputfile):
             linearray.Add(point)
             newfeature = rows_ic.NewRow()
         newfeature.shape = linearray
-        newfeature.SetValue(leidingidkolom,key)
+        newfeature.SetValue(leidingidkolom, key)
         rows_ic.InsertRow(newfeature)
         linearray.RemoveAll()
 
 
-def create_dict_stars_around_rekenpunten(RR_Oppervlak_list, config, rekenpunten_x_y_coordinaten):
-    ''' berekent de eindpunten van de ster om de rekenpunten en retourneert deze als de waarde open_water_ha groter als 0 is.
-    Daarnaast wordt een dictionary geretourneerd met de openwater values en als key de gpgident '''
+def create_dict_stars_around_rekenpunten(peilgebieden_list, config, rekenpunten_x_y_coordinaten):
+    ''' berekent de eindpunten van de ster om de rekenpunten en retourneert deze.
+    Daarnaast wordt een dictionary geretourneerd met de gpgident als key'''
 
     dict_points_for_star = {}
-    dict_openwater_ha ={}
-    key_check = "'%s'" % config.get('zijtakken', 'input_oppervlak_openwat')
-    for RR_Oppervlak_dict in RR_Oppervlak_list:
+    dict_openwater_ha = {}
 
-        if RR_Oppervlak_dict.has_key('openwat_ha'):
-            count =0
-            open_water = float(RR_Oppervlak_dict['openwat_ha'])
-            peilgebiedid = RR_Oppervlak_dict['gpgident']
-            if rekenpunten_x_y_coordinaten.has_key(peilgebiedid):
-                rekenpunt_xy_coordinaat = rekenpunten_x_y_coordinaten[peilgebiedid].split(' ')
-                xcoord = rekenpunt_xy_coordinaat[0]
-                ycoord = rekenpunt_xy_coordinaat[1]
+    count = 0
+    for peilgebiedid in peilgebieden_list.keys():
+        if rekenpunten_x_y_coordinaten.has_key(peilgebiedid):
+            rekenpunt_xy_coordinaat = rekenpunten_x_y_coordinaten[peilgebiedid].split(' ')
+            xcoord = rekenpunt_xy_coordinaat[0]
+            ycoord = rekenpunt_xy_coordinaat[1]
 
-                if open_water >0:
-                    dict_openwater_ha[peilgebiedid] = open_water
-                    length = int(config.get('zijtakken', 'length_of_breach'))
-                    tot = int(config.get('zijtakken', 'numb_of_lines_opt_breach'))
-                    for i in range(tot):
-                        alpha = float(i)/tot * 2 * math.pi
-                        dX = int(config.get('zijtakken', 'length_of_breach')) * math.sin(alpha)
-                        dY = int(config.get('zijtakken', 'length_of_breach')) * math.cos(alpha)
-                        x = float(xcoord) + float(dX)
-                        y = float(ycoord) + float(dY)
-                        count = count + 1
-                        if not dict_points_for_star.has_key(peilgebiedid):
-                            dict_points_for_star[peilgebiedid] = []
-                        dict_points_for_star[peilgebiedid].append(str(x) + ' ' + str(y))
+            length = int(config.get('zijtakken', 'length_of_breach'))
+            tot = int(config.get('zijtakken', 'numb_of_lines_opt_breach'))
+            for i in range(tot):
+                alpha = float(i) / tot * 2 * math.pi
+                dX = int(config.get('zijtakken', 'length_of_breach')) * math.sin(alpha)
+                dY = int(config.get('zijtakken', 'length_of_breach')) * math.cos(alpha)
+                x = float(xcoord) + float(dX)
+                y = float(ycoord) + float(dY)
+                count = count + 1
+                if not dict_points_for_star.has_key(peilgebiedid):
+                    dict_points_for_star[peilgebiedid] = []
+                dict_points_for_star[peilgebiedid].append(str(x) + ' ' + str(y))
 
     return dict_points_for_star, dict_openwater_ha
 
@@ -270,9 +249,9 @@ def bepalen_x_y_coordinaat_meerdere_punten(gp, punten_shape, field_containing_ke
         key = item.getValue(field_containing_key)
         punt = item.shape.centroid
         punt_spl = punt.split(' ')
-        punt_x = float(punt_spl[0].replace(',','.'))
-        punt_y = float(punt_spl[1].replace(',','.'))
-        punt = '%.5f' %(punt_x)  + " " + '%.5f' %(punt_y)
+        punt_x = float(punt_spl[0].replace(',', '.'))
+        punt_y = float(punt_spl[1].replace(',', '.'))
+        punt = '%.5f' % (punt_x) + " " + '%.5f' % (punt_y)
 
         if not output_dict.has_key(key):
             output_dict[key] = []
@@ -288,9 +267,9 @@ def bepalen_x_y_coordinaat(gp, punten_shape, field_containing_key):
         key = item.getValue(field_containing_key)
         punt = item.shape.centroid
         punt_spl = punt.split(' ')
-        punt_x = float(punt_spl[0].replace(',','.'))
-        punt_y = float(punt_spl[1].replace(',','.'))
-        punt = '%.5f' %(punt_x)  + " " + '%.5f' %(punt_y)
+        punt_x = float(punt_spl[0].replace(',', '.'))
+        punt_y = float(punt_spl[1].replace(',', '.'))
+        punt = '%.5f' % (punt_x) + " " + '%.5f' % (punt_y)
 
 
         if not output_dict.has_key(key):
@@ -322,7 +301,7 @@ def main():
 
         #----------------------------------------------------------------------------------------
         # Create workspace
-        workspace = config.get('GENERAL','location_temp')
+        workspace = config.get('GENERAL', 'location_temp')
 
         turtlebase.arcgis.delete_old_workspace_gdb(gp, workspace)
 
@@ -336,33 +315,28 @@ def main():
         log.info("Reading and checking input")
         rekenpunten = sys.argv[1]
         waterlijnen = sys.argv[2]
-        peilgebieden= sys.argv[3] #optioneel
-        RR_Oppervlak = sys.argv[4]
-        output_bergingstakken = sys.argv[5]
-        RR_Oppervlak_list = nens.gp.get_table(gp,RR_Oppervlak)
+        peilgebieden = sys.argv[3] #optioneel
+        output_bergingstakken = sys.argv[4]
+        gpgident = config.get('General', 'gpgident')
+        if turtlebase.arcgis.is_fieldname(gp, peilgebieden, gpgident):
+            peilgebieden_list = nens.gp.get_table(gp, peilgebieden, primary_key=gpgident.lower())
+        else:
+            log.error("field %s is missing in %s", gpgident, peilgebieden)
         log.info("Controleer of de opgegeven bestandsnamen arcgis compatibel zijn")
+
         for argv in sys.argv[1:]:
             turtlebase.filenames.check_filename(argv)
 
-        dict_values_to_check = {'input_oppervlak_openwat':'openwat_ha','peilgebied_id':'gpgident'}
-        for item in dict_values_to_check.keys():
-
-            for RR_Oppervlakitems in RR_Oppervlak_list:
-
-                if (str(dict_values_to_check[item])) not in RR_Oppervlakitems:
-                    log.error("RR_Oppervlak heeft geen " + dict_values_to_check[item] +" veld")
-                    sys.exit(5)
-
         #uitlezen x en y coordinaat van de rekenpunten
         log.info("Inlezen rekenpunten")
-        gpgident = config.get('GENERAL', 'gpgident')
+
         rekenpunten_x_y_coordinaten = bepalen_x_y_coordinaat(gp, rekenpunten, gpgident)
-        log.info("Kopieer "+ waterlijnen + " naar de workspace")
+        log.info("Kopieer " + waterlijnen + " naar de workspace")
         waterlijnen_lokaal = turtlebase.arcgis.get_random_file_name(workspace_gdb)
         log.debug("Kopieer de waterlijnen naar een lokale directory ")
         gp.select_analysis(waterlijnen, waterlijnen_lokaal)
         log.info("Bereken eindpunten van potentiele bergingstakken rondom rekenpunten")
-        dict_stars, dict_openwater = create_dict_stars_around_rekenpunten(RR_Oppervlak_list, config, rekenpunten_x_y_coordinaten)
+        dict_stars, dict_openwater = create_dict_stars_around_rekenpunten(peilgebieden_list, config, rekenpunten_x_y_coordinaten)
 
         joined_dictionaries = join_dictionaries(dict_stars, rekenpunten_x_y_coordinaten)
         star = turtlebase.arcgis.get_random_file_name(workspace_gdb)
@@ -372,10 +346,10 @@ def main():
         intersect = turtlebase.arcgis.get_random_file_name(workspace_gdb)
         log.info("Bereken kruisingen van potentiele bergingstakken met waterlijnen")
         #Buffer_analysis (in_features, out_feature_class, buffer_distance_or_field, line_side, line_end_type, dissolve_option, dissolve_field)
-        gp.Intersect_analysis(star +";" + waterlijnen,intersect, "#","#","POINT")
+        gp.Intersect_analysis(star + ";" + waterlijnen, intersect, "#", "#", "POINT")
         intersect_x_y_coordinaten = bepalen_x_y_coordinaat(gp, intersect, gpgident)
 
-        remainingpoints_to_be_removed_from_star = remove_duplicate_values_from_dictionaries(rekenpunten_x_y_coordinaten,intersect_x_y_coordinaten)
+        remainingpoints_to_be_removed_from_star = remove_duplicate_values_from_dictionaries(rekenpunten_x_y_coordinaten, intersect_x_y_coordinaten)
 
         #nu remainingpoints_to_be_removed_from_star dictionary de keys vergelijken met de id in star en dan record verwijderen
 
@@ -388,8 +362,8 @@ def main():
         log.info("Bereken ideale bergingstak")
         create_points_from_dict(gp, dict_stars, star_punten, gpgident)
 
-        intersect2 =  turtlebase.arcgis.get_random_file_name(workspace_gdb)
-        gp.Intersect_analysis(star_punten +";" + star,intersect2, "#","#","POINT")
+        intersect2 = turtlebase.arcgis.get_random_file_name(workspace_gdb)
+        gp.Intersect_analysis(star_punten + ";" + star, intersect2, "#", "#", "POINT")
         log.info("Bereken afstand potentiele bergingstakken naar waterlijn")
         log.debug("Als eerste wordt een buffer aangemaakt ")
 
@@ -398,7 +372,7 @@ def main():
         snijpunt_waterlijn = turtlebase.arcgis.get_random_file_name(workspace_gdb)
 
         log.debug("Nu intersect van de buffer met de waterlijnen. Deze punten worden gebruikt om de afstand naar de waterlijn te berekenen ")
-        gp.Intersect_analysis(buffer_star + ";" + waterlijnen_lokaal, snijpunt_waterlijn, "#", "#","POINT")
+        gp.Intersect_analysis(buffer_star + ";" + waterlijnen_lokaal, snijpunt_waterlijn, "#", "#", "POINT")
 
         log.debug("Nu wegschrijven van de coordinaten van de snijpunten met de waterlijn naar een dictionary")
         snijpunten_waterlijn_dict = bepalen_x_y_coordinaat_meerdere_punten(gp, snijpunt_waterlijn, gpgident)
@@ -424,12 +398,10 @@ def main():
         # voor de gebruiker dat hij/zij daar even handmatig wat aan aan moet passen.
         log.info("Creeeren out_shape bergingstakken")
         gp.select_analysis(star, output_bergingstakken)
-        # toevoegen veld openwat_ha en vullen van deze met waardes uit de RR_oppervlak tabel
-        add_field_with_values_to_shapefile(gp, output_bergingstakken, config.get('zijtakken', 'input_oppervlak_openwat'), gpgident, dict_openwater)
 
         log.info("Check of er bergingstakken zijn die overlappen ")
         intersect3 = turtlebase.arcgis.get_random_file_name(workspace_gdb)
-        gp.Intersect_analysis(output_bergingstakken, intersect3, "#","#","POINT")
+        gp.Intersect_analysis(output_bergingstakken, intersect3, "#", "#", "POINT")
         #loop door de output van de intersect en geeft de GPGident weer als deze in de attribute table staat
         row = gp.SearchCursor(intersect3)
         for item in nens.gp.gp_iterator(row):
@@ -444,7 +416,7 @@ def main():
 
             log.info("workspace deleted")
         except:
-            log.warning("failed to delete %s" % workspace_gdb)
+            log.debug("failed to delete %s" % workspace_gdb)
 
         mainutils.log_footer()
 

@@ -52,7 +52,7 @@ def create_output_table(gp, output_surface_table, area_ident, field_range):
 
 
 def add_integer_ident(gp, temp_level_area, id_int_field, area_ident):
-    """
+    """a
     """
     log.debug(" - update records")
     if not turtlebase.arcgis.is_fieldname(gp, temp_level_area, id_int_field):
@@ -114,7 +114,7 @@ def main():
 
         #---------------------------------------------------------------------
         # Check geometry input parameters
-        cellsize = config.get('maaiveldkarakteristiek', 'cellsize')
+        cellsize = gp.describe(input_ahn_raster).MeanCellHeight
 
         log.info("Check geometry of input parameters")
         geometry_check_list = []
@@ -132,14 +132,8 @@ def main():
 
         if gp.describe(input_ahn_raster).PixelType[0] not in ['U', 'S']:
             log.error("Input AHN is a floating point raster, \
-                    for this script an integer is nessecary")
+                    for this script an integer is necessary")
             geometry_check_list.append(input_ahn_raster + " -> (Integer)")
-
-        if gp.describe(input_ahn_raster).MeanCellHeight != float(cellsize):
-            log.error("Cell size of AHN is %s, must be 25" % gp.describe(
-                                            input_ahn_raster).MeanCellHeight)
-            geometry_check_list.append("%s -> (Cellsize %s)" % (
-                                        input_ahn_raster, cellsize))
 
         if len(geometry_check_list) > 0:
             log.error("check input: %s" % geometry_check_list)
@@ -155,7 +149,7 @@ def main():
         # <check required fields from input data,
         # append them to list if missing>"
         if not turtlebase.arcgis.is_fieldname(
-                    gp, input_level_area_fc, config.get(
+                            gp, input_level_area_fc, config.get(
                             'maaiveldkarakteristiek',
                             'input_peilgebied_ident')):
             log.debug(" - missing: %s in %s" % (
@@ -165,7 +159,7 @@ def main():
                     input_level_area_fc, config.get('maaiveldkarakteristiek',
                                                     'input_peilgebied_ident')))
         if not turtlebase.arcgis.is_fieldname(
-                    gp, input_level_area_table, config.get(
+                            gp, input_level_area_table, config.get(
                             'maaiveldkarakteristiek',
                             'input_peilgebied_ident')):
             log.debug(" - missing: %s in %s" % (
@@ -200,9 +194,9 @@ def main():
         # Add ID Int to level area
         log.info("Create level area ascii")
         area_id_dict = add_integer_ident(gp, temp_level_area, config.get(
-            'maaiveldkarakteristiek', 'id_int').lower(),
-                    config.get('maaiveldkarakteristiek',
-                               'input_peilgebied_ident'))
+                    'maaiveldkarakteristiek', 'id_int').lower(),
+                                         config.get('maaiveldkarakteristiek',
+                                                    'input_peilgebied_ident'))
 
         out_raster_dataset = turtlebase.arcgis.get_random_file_name(
                                                         workspace_gdb)
@@ -210,16 +204,16 @@ def main():
             'maaiveldkarakteristiek', 'id_int'), out_raster_dataset, cellsize)
 
         id_int_ascii = turtlebase.arcgis.get_random_file_name(
-                                                workspace, ".asc")
+                            workspace, ".asc")
         log.debug("id_int_ascii: %s" % id_int_ascii)
         gp.RasterToASCII_conversion(out_raster_dataset, id_int_ascii)
 
         #---------------------------------------------------------------------
         log.info("Read targetlevel table")
         area_level_dict = nens.gp.get_table(
-            gp, input_level_area_table, primary_key=config.get(
-                    'maaiveldkarakteristiek',
-                    'input_peilgebied_ident').lower())
+                            gp, input_level_area_table, primary_key=config.get(
+                                'maaiveldkarakteristiek',
+                                'input_peilgebied_ident').lower())
         target_level_dict = {}
 
         for k, v in area_level_dict.items():
@@ -239,7 +233,8 @@ def main():
         #scurve_dict = turtlebase.spatial.create_scurve(ahn_ascii,
         # id_int_ascii, target_level_dict, field_range)
         scurve_dict = turtlebase.spatial.surface_level_statistics(
-                ahn_ascii, id_int_ascii, target_level_dict, field_range)
+                            ahn_ascii, id_int_ascii,
+                            target_level_dict, field_range)
         #---------------------------------------------------------------------
         log.info("Create output table")
         create_output_table(gp, output_surface_table, config.get(
@@ -258,9 +253,9 @@ def main():
         # Write results to output table
         log.info("Write results to output table")
         turtlebase.arcgis.write_result_to_output(
-            output_surface_table, config.get(
-                'maaiveldkarakteristiek',
-                'input_peilgebied_ident').lower(), scurve_dict)
+                            output_surface_table, config.get(
+                                'maaiveldkarakteristiek',
+                                'input_peilgebied_ident').lower(), scurve_dict)
 
         #---------------------------------------------------------------------
         # Delete temporary workspace geodatabase & ascii files

@@ -7,10 +7,8 @@ import os
 import logging
 import traceback
 import math
-import ConfigParser
 
 # Import GIS modules
-import arcgisscripting
 import nens.gp
 
 # Import Turtlebase modules
@@ -44,10 +42,10 @@ def create_point_file_from_dict(gp, centroid_dict, output_centroid_file, peilgeb
     '''Creeert een punten_shape obv een dictionary met centroides  daarnaast voegt het de peilgebiedid toe aan de file'''
     output_centroid_filename = os.path.basename(output_centroid_file)
     workspace_gdb = os.path.dirname(output_centroid_file)
-    log.info("The centroid file " + output_centroid_file +" wordt aangemaakt..." )
+    log.info("The centroid file %s wordt aangemaakt" % output_centroid_file)
 
     gp.CreateFeatureClass_management(workspace_gdb, output_centroid_filename, "POINT")
-    gp.Addfield_management(output_centroid_file,peilgebied_id, "TEXT")
+    gp.Addfield_management(output_centroid_file, peilgebied_id, "TEXT")
     rows_out = gp.InsertCursor(output_centroid_file)
     pnt = gp.CreateObject("Point")
     for peilgebied in centroid_dict:
@@ -68,13 +66,13 @@ def read_coordinates_from_string(coord_string):
     coord_spl = coord_string.split(' ')
     x = float(coord_spl[0])
     y = float(coord_spl[1])
-    return x,y
+    return x, y
 
 
 def calculate_distance(x1, y1, x2, y2):
     ''' berekent de afstand tussen x1 y1 en x2 y2. input zijn de coordinaten als floating point '''
-    x_kwadraat = math.pow((x1 - x2),2)
-    y_kwadraat = math.pow((y1 - y2),2)
+    x_kwadraat = math.pow((x1 - x2), 2)
+    y_kwadraat = math.pow((y1 - y2), 2)
     distance = math.sqrt(x_kwadraat + y_kwadraat)
     return distance
 
@@ -144,7 +142,7 @@ def reading_line_features_nodes(gp, inputFC):
 ##                if not nodes_dict.has_key(row_id):
 ##                        nodes_dict[row_id] = {}
 ##                nodes_dict[row_id][pnt_count] = str(pnt.x) + " " + str(pnt.y)
-                key_coord = '%.5f' %(pnt.x)  + " " + '%.5f' %(pnt.y)
+                key_coord = '%.5f' % (pnt.x) + " " + '%.5f' % (pnt.y)
                 if temp_dict.has_key(key_coord):
                     nodes_dict[key] = key_coord
                 temp_dict[key_coord] = key
@@ -168,7 +166,6 @@ def reading_line_features_vertices(gp, inputFC, field_peilgebied_id, peilgebiede
     inDesc = gp.describe(inputFC)
     inRows = gp.searchcursor(inputFC)
     inRow = inRows.next()
-    sepchar = '.'
 
     while inRow:
         peilgebied_shapefile = inRow.getValue(field_peilgebied_id)
@@ -204,7 +201,7 @@ def bepalen_centroides(gp, polygon_shape, field_containing_key):
         centroid = item.shape.centroid
         if not dict.has_key(key):
             dict[key] = {}
-            dict[key]['centroid']=centroid
+            dict[key]['centroid'] = centroid
     return dict
 
 
@@ -218,7 +215,7 @@ def main():
 
         #----------------------------------------------------------------------------------------
         # Create workspace
-        workspace = config.get('GENERAL','location_temp')
+        workspace = config.get('GENERAL', 'location_temp')
         turtlebase.arcgis.delete_old_workspace_gdb(gp, workspace)
 
         if not os.path.isdir(workspace):
@@ -228,14 +225,13 @@ def main():
             log.error("failed to create a file geodatabase in %s" % workspace)
 
         #----------------------------------------------------------------------------------------
-        if len(sys.argv) == 5:
+        if len(sys.argv) == 4:
             log.info("Reading and checking input")
             waterlijnen = sys.argv[1]
             peilgebieden = sys.argv[2]
-            RR_Oppervlak = sys.argv[3]
-            output_file = sys.argv[4]
+            output_file = sys.argv[3]
         else:
-            log.error("usage: <waterlijnen> <peilgebieden> <rr_oppervlak> <output_file>")
+            log.error("usage: <waterlijnen> <peilgebieden> <output_file>")
             sys.exit(1)
 
         #----------------------------------------------------------------------------------------
@@ -245,9 +241,8 @@ def main():
 
         #<check required fields from input data, append them to list if missing>"
         gpgident = config.get('GENERAL', 'gpgident')
-        check_fields = {peilgebieden: [gpgident],
-                        RR_Oppervlak: [config.get('koppelpunten', 'input_oppervlak_openwat'), gpgident]}
-        for input_fc,fieldnames in check_fields.items():
+        check_fields = {peilgebieden: [gpgident]}
+        for input_fc, fieldnames in check_fields.items():
             for fieldname in fieldnames:
                 if not turtlebase.arcgis.is_fieldname(gp, input_fc, fieldname):
                     errormsg = "fieldname %s not available in %s" % (fieldname, input_fc)
@@ -265,7 +260,7 @@ def main():
             peilgebieden_centroides_dict = bepalen_centroides(gp, peilgebieden, gpgident)
             # Eerst een intersect van de peilgebiden met de waterlijnen
             #extract de shapefiles uit de geodatabase
-            log.info("Kopieer "+ waterlijnen + " naar de workspace")
+            log.info("Kopieer " + waterlijnen + " naar de workspace")
             waterlijnen_lokaal = turtlebase.arcgis.get_random_file_name(workspace_gdb)
             log.debug("Kopieer de waterlijnen naar een lokale directory")
             gp.select_analysis(waterlijnen, waterlijnen_lokaal)
@@ -314,7 +309,7 @@ def main():
 
             log.info("workspace deleted")
         except:
-            log.warning("failed to delete %s" % workspace_gdb)
+            log.debug("failed to delete %s" % workspace_gdb)
 
         mainutils.log_footer()
     except:
