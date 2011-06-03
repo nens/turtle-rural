@@ -130,11 +130,11 @@ Function ConflictingPackagesPage
 
   StrCpy $PACKAGES ""
  
-  ExecWait "$PYTHONDIR\pythonw.exe check_nens.py"
+  ExecWait "$PYTHONDIR\pythonw.exe $PLUGINSDIR\check_nens.py"
   IfErrors +1 +2
   StrCpy $PACKAGES "- nens\n"
 
-  ExecWait "$PYTHONDIR\pythonw.exe check_turtlebase.py"
+  ExecWait "$PYTHONDIR\pythonw.exe $PLUGINSDIR\check_turtlebase.py"
   IfErrors +1 +2
   StrCpy $PACKAGES "$PACKAGES- turtlebase\n"
 
@@ -150,10 +150,10 @@ FunctionEnd
 
 Function leaveConflictingPackagesPage
 
-  ExecWait "$PYTHONDIR\pythonw.exe check_nens.py"
+  ExecWait "$PYTHONDIR\pythonw.exe $PLUGINSDIR\check_nens.py"
   IfErrors revisitPage
 
-  ExecWait "$PYTHONDIR\pythonw.exe check_turtlebase.py"
+  ExecWait "$PYTHONDIR\pythonw.exe $PLUGINSDIR\check_turtlebase.py"
   IfErrors revisitPage
   Return
 
