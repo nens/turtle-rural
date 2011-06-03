@@ -5,11 +5,16 @@ Changelog of turtle-rural
 0.2 (unreleased)
 ----------------
 
+- Fixed ticket 2766: the Makefile to create the Windows installers
+  does not function when setuptools is installed as a site package.
+- Fixed ticket 2854: the installer stops because it appears to
+  incorrectly detect that libraries nens and turtlebase are installed
+  as a site package.
 - The Windows installer now checks whether the Python libraries nens
   and turtlebase are installed globally. If at least one of them is
   installed globally, the user has to deinstall these libraries.
-- Pinned nens to 1.2.
-- Pinned turtlebase to 11.2.
+- Pinned nens to 1.3.
+- Pinned turtlebase to 11.2dev.
 
 0.1 (2011-03-30)
 ----------------

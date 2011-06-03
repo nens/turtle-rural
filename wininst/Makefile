@@ -22,6 +22,17 @@ clean:
 
 create-setup:
 	cp turtle-rural.nsi autogen-turtle-rural.nsi
+	# If setuptools is installed as a site package, which is
+	# required by zest.releaser, the execution of buildout in this
+	# Makefile will not download it. However, the execution of
+	# buildout in the installer requires it so we have to make
+	# sure it is in the right place.
+	#
+	# Ideally, the buildout option 'include-site-packages=false'
+	# lets buildout ignore site packages. Unfortunately, some
+	# recipes ignore this option and a site packages may still
+	# end up being used.
+	cp setuptools*.egg ../eggs
 	# we escape the dollar sign in the following sed regular expressions,
 	# see the '$$', otherwise make would try to expand them
 	sed -i 's/\(StrCpy $$PYTHONVERSION[ ][ ]*\).*/\1"$(MAKE_PYTHONVERSION)"/' autogen-turtle-rural.nsi
@@ -31,7 +42,7 @@ create-setup:
 	# as the shell used by make does not like the backslash (or double
 	# backslash) as one
 	cd ..; c:/$(MAKE_PYTHONDIR)/python bootstrap.py
-	cd ..; bin/buildout "buildout:download-cache=downloads"
+	cd ..; bin/buildout buildout:download-cache=downloads buildout:include-site-packages=false
 	$(MAKENSIS) autogen-turtle-rural.nsi
 	mv turtle-rural-setup.exe turtle-rural-setup-python$(MAKE_PYTHONVERSION).exe
 
