@@ -2,6 +2,12 @@ Changelog of turtle-rural
 =========================
 
 
+0.3 (unreleased)
+----------------
+
+- Nothing changed yet.
+
+
 0.2 (2011-06-09)
 ----------------
 
