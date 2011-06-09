@@ -2,7 +2,7 @@ Changelog of turtle-rural
 =========================
 
 
-0.2 (unreleased)
+0.2 (2011-06-09)
 ----------------
 
 - Fixed ticket 2766: the Makefile to create the Windows installers
