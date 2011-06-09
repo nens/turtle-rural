@@ -69,7 +69,7 @@ def main():
 
         # --------------------------------------------------------------------
         # check inputfields
-        log.info("Getting commandline parameters... ")
+        log.info("Getting commandline parameters")
 
         if len(sys.argv) == 6:
             input_peilgebieden = sys.argv[1]
@@ -84,7 +84,7 @@ def main():
 
         # --------------------------------------------------------------------
         #check input parameters
-        log.info('Checking presence of input files... ')
+        log.info('Checking presence of input files')
         if not(gp.exists(input_peilgebieden)):
             log.error("inputfile peilgebieden: %s does not exist!",
                       input_peilgebieden)
@@ -98,7 +98,7 @@ def main():
                       input_ahn_raster)
             sys.exit(5)
 
-        log.info('input parameters checked... ')
+        log.info('input parameters checked')
         # --------------------------------------------------------------------
         # Check geometry input parameters
         cellsize = gp.describe(input_ahn_raster).MeanCellHeight
@@ -125,7 +125,7 @@ def main():
             log.error("check input: %s" % geometry_check_list)
             sys.exit(2)
 
-        log.info('input format checked... ')
+        log.info('input format checked')
         #---------------------------------------------------------------------
         # Check required fields in input data
         log.info("Check required fields in input data")
@@ -193,11 +193,15 @@ def main():
 
         for return_period in return_periods:
             log.info(" - create raster for ws_%s" % return_period)
-            out_raster_dataset = (output_folder_waterlevel + "/ws_%s",
-                                  return_period)
+            out_raster_dataset = os.path.join(
+                                    output_folder_waterlevel,
+                                     "ws_%s" % return_period)
             if not gp.exists(out_raster_dataset):
                 input_field = "WS_%s" % return_period
-                gp.FeatureToRaster_conversion(temp_peilgebieden, input_field, out_raster_dataset, int(cellsize))
+                gp.FeatureToRaster_conversion(temp_peilgebieden,
+                                              input_field,
+                                              out_raster_dataset,
+                                              int(cellsize))
             else:
                 log.error("output waterlevel raster already exists,\
                 delete this first or change output folder")
@@ -277,8 +281,9 @@ def main():
             'Inundatie', 'herhalingstijd_inundatie_grasland')
         if config.get('Inundatie', 'percentage_inundatie_grasland') != "-":
             log.debug(" - create inundation grass")
-            waterlevel = ("%s/ws_%s",
-                          (output_folder_waterlevel, return_period_grass))
+            waterlevel = ("%s/ws_%s" % (
+                            output_folder_waterlevel,
+                            return_period_grass))
             if gp.exists(waterlevel):
                 inundation_grass = turtlebase.arcgis.get_random_file_name(
                                                         workspace, ".asc")

@@ -44,7 +44,7 @@ gpg_afvoerendoppervlak = config.get('afvoerendoppervlak', 'gpg_afvoerendoppervla
 gpg_afvoercap_ha = config.get('afvoerendoppervlak', 'gpg_afvoercap_ha')
 
 
-def calc_afv_opp_rec (gpg_ident, kwk_base, oppervlak_data, afvoer_data, pg_data_output, pg_passed, pg_route, pg_loops):
+def calc_afv_opp_rec(gpg_ident, kwk_base, oppervlak_data, afvoer_data, pg_data_output, pg_passed, pg_route, pg_loops):
     '''
     calculate afvoerend oppervlak in a recursive way; handles cycles as well
     '''
