@@ -46,7 +46,7 @@ def check_input_id_and_names(gp, fc, id_field, name_field, ids_found):
             ids_found.add(id)
 
             if is_integer(id):
-                if id < 10000:
+                if int(id) < 10000:
                     log.warning("id %s is an integer" % id)
                     number_of_warnings += 1
 
@@ -134,7 +134,7 @@ def main():
         # Check ids and names in structures
         ids_found = set()
         number_of_errors = 0
-        config_cf = mainutils.read_config(os.path.dirname(settings), os.path.basename(settings))
+        config_cf = mainutils.read_config(settings, os.path.basename(settings))
         # Check ids and names in bridge
         input_bridge = sys.argv[3]
         if input_bridge != "#":

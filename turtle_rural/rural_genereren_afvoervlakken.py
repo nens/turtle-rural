@@ -25,7 +25,7 @@ def main():
         mainutils.log_header(__name__)
         #----------------------------------------------------------------------------------------
         # Create workspace
-        workspace = config.get('GENERAL','location_temp')
+        workspace = config.get('GENERAL', 'location_temp')
 
         turtlebase.arcgis.delete_old_workspace_gdb(gp, workspace)
 
@@ -91,7 +91,7 @@ def main():
         gp.Intersect_analysis(input_polygon_fc + ";" + input_channel_fc, intersect_waterlijn)
 
         polygon_list = []
-        for k,v in polygon_dict.items():
+        for k, v in polygon_dict.items():
             log.info("extract polygon %s" % k)
 
             huidig_peilgebied_lyr = turtlebase.arcgis.get_random_layer_name()
@@ -164,7 +164,7 @@ def main():
 
             log.info("workspace deleted")
         except:
-            log.warning("failed to delete %s" % workspace_gdb)
+            log.debug("failed to delete %s" % workspace_gdb)
 
         mainutils.log_footer()
     except:

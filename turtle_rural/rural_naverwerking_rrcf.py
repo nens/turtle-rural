@@ -60,10 +60,6 @@ def main():
         if errorcode == 1:
                 log.error("failed to create a file geodatabase in %s" % workspace)
         # Input parameters
-        # check for illegal characters in input:
-        for argv in sys.argv[1:]:
-            turtlebase.filenames.check_filename(argv)
-
         if len(sys.argv) == 11:
             # input parameters
             input_voronoi_polygon = sys.argv[1]
@@ -211,7 +207,7 @@ def main():
         # copy waterlevel to voronoi polygons
         rows = gp.UpdateCursor(temp_voronoi)
         for row in nens.gp.gp_iterator(rows):
-            row_id = row.GetValue(config.get('naverwerkings_rrcf', 'calculation_point_ident'))
+            row_id = row.GetValue(config.get('naverwerking_rrcf', 'calculation_point_ident'))
             if row_id in waterlevel_dict:
                 log.debug(waterlevel_dict[row_id])
                 for return_period in return_periods:
@@ -487,7 +483,15 @@ def main():
         dissolve_lyr = turtlebase.arcgis.get_random_layer_name()
         gp.MakeFeatureLayer_management(temp_fc_union_lgn, dissolve_lyr, "%s <> ''" % gpgident_field)
         temp_fc_dissolve_lgn = turtlebase.arcgis.get_random_file_name(workspace_gdb)
-        gp.Dissolve_management(dissolve_lyr, temp_fc_dissolve_lgn, "%s; GRIDCODE" % gpgident_field)
+        if turtlebase.arcgis.is_fieldname(gp, dissolve_lyr, "GRIDCODE"):
+            gp.Dissolve_management(dissolve_lyr, temp_fc_dissolve_lgn, "%s; GRIDCODE" % gpgident_field)
+            gridcode = "gridcode"
+        elif turtlebase.arcgis.is_fieldname(gp, dissolve_lyr, "grid_code"):
+            gp.Dissolve_management(dissolve_lyr, temp_fc_dissolve_lgn, "%s; grid_code" % gpgident_field)
+            gridcode = "grid_code"
+        else:
+            log.error("no field GRIDCODE or grid_code available in %s" % dissolve_lyr)
+            sys.exit(2)
 
         # Calculate area lgn
         if not turtlebase.arcgis.is_fieldname(gp, temp_fc_dissolve_lgn, "area_lgn"):
@@ -495,7 +499,7 @@ def main():
         turtlebase.arcgis.calculate_area(gp, temp_fc_dissolve_lgn, "area_lgn")
 
         lgn_dict = nens.gp.get_table(gp, temp_fc_dissolve_lgn)
-        translate_lgn_dict = translate_dict(lgn_dict, 'gridcode', 'area_lgn')
+        translate_lgn_dict = translate_dict(lgn_dict, gridcode, 'area_lgn')
         log.debug("translate_lgn_dict: %s" % translate_lgn_dict)
 
         # Create feature class from inundation_grid
@@ -506,9 +510,14 @@ def main():
             temp_fc_union_inundation = turtlebase.arcgis.get_random_file_name(workspace_gdb)
             gp.Union_analysis(temp_fc_dissolve_lgn + ";" + temp_fc_inundation, temp_fc_union_inundation)
             dissolve_inundation_lyr = turtlebase.arcgis.get_random_layer_name()
-            gp.MakeFeatureLayer_management(temp_fc_union_inundation, dissolve_inundation_lyr, "GRIDCODE_1 > 0")
+            if turtlebase.arcgis.is_fieldname(gp, temp_fc_union_inundation, "GRIDCODE_1"):
+                gp.MakeFeatureLayer_management(temp_fc_union_inundation, dissolve_inundation_lyr, "GRIDCODE_1 > 0")
+                gridcode_1 = "gridcode_1"
+            elif turtlebase.arcgis.is_fieldname(gp, temp_fc_union_inundation, "GRID_CODE1"):
+                gp.MakeFeatureLayer_management(temp_fc_union_inundation, dissolve_inundation_lyr, "GRID_CODE1 > 0")
+                gridcode_1 = "grid_code1"
             temp_fc_dissolve_inundation = turtlebase.arcgis.get_random_file_name(workspace_gdb)
-            gp.Dissolve_management(dissolve_inundation_lyr, temp_fc_dissolve_inundation, "%s; GRIDCODE; GRIDCODE_1" % gpgident_field)
+            gp.Dissolve_management(dissolve_inundation_lyr, temp_fc_dissolve_inundation, "%s; %s; %s" % (gpgident_field, gridcode, gridcode_1))
 
             # Calculate area inundation
             if not turtlebase.arcgis.is_fieldname(gp, temp_fc_dissolve_inundation, "area_inund"):
@@ -516,7 +525,7 @@ def main():
             turtlebase.arcgis.calculate_area(gp, temp_fc_dissolve_inundation, "area_inun")
 
             inundation_dict = nens.gp.get_table(gp, temp_fc_dissolve_inundation)
-            translate_inundation_dict = translate_dict(inundation_dict, 'gridcode_1', 'area_inun')
+            translate_inundation_dict = translate_dict(inundation_dict, gridcode_1, 'area_inun')
             log.debug("translate_inundation_dict: %s" % translate_inundation_dict)
         else:
             translate_inundation_dict = {}
@@ -529,9 +538,9 @@ def main():
             temp_fc_union_waterdamage = turtlebase.arcgis.get_random_file_name(workspace_gdb)
             gp.Union_analysis(temp_fc_dissolve_lgn + ";" + temp_fc_waterdamage, temp_fc_union_waterdamage)
             dissolve_waterdamage_lyr = turtlebase.arcgis.get_random_layer_name()
-            gp.MakeFeatureLayer_management(temp_fc_union_waterdamage, dissolve_waterdamage_lyr, "GRIDCODE_1 > 0")
+            gp.MakeFeatureLayer_management(temp_fc_union_waterdamage, dissolve_waterdamage_lyr, "%s > 0" % gridcode_1)
             temp_fc_dissolve_waterdamage = turtlebase.arcgis.get_random_file_name(workspace_gdb)
-            gp.Dissolve_management(dissolve_waterdamage_lyr, temp_fc_dissolve_waterdamage, "%s; GRIDCODE; GRIDCODE_1" % gpgident_field)
+            gp.Dissolve_management(dissolve_waterdamage_lyr, temp_fc_dissolve_waterdamage, "%s; %s; %s" % (gpgident_field, gridcode, gridcode_1))
 
             # Calculate area waterdamage
             if not turtlebase.arcgis.is_fieldname(gp, temp_fc_dissolve_waterdamage, "area_damag"):
@@ -539,7 +548,7 @@ def main():
             turtlebase.arcgis.calculate_area(gp, temp_fc_dissolve_waterdamage, "area_damag")
 
             waterdamage_dict = nens.gp.get_table(gp, temp_fc_dissolve_waterdamage)
-            translate_waterdamage_dict = translate_dict(waterdamage_dict, 'gridcode_1', 'area_damag')
+            translate_waterdamage_dict = translate_dict(waterdamage_dict, gridcode_1, 'area_damag')
             log.debug("translate_waterdamage_dict: %s" % translate_waterdamage_dict)
         else:
             translate_waterdamage_dict = {}
@@ -759,7 +768,7 @@ def main():
 
             log.info("workspace deleted")
         except:
-            log.warning("failed to delete %s" % workspace_gdb)
+            log.debug("failed to delete %s" % workspace_gdb)
 
         tempfiles = os.listdir(workspace)
         for tempfile in tempfiles:

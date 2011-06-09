@@ -26,12 +26,6 @@ def add_xy_coords(gp, fc, xfield, yfield):
             rows.UpdateRow(row)
 
 
-def read_settings_ini(settings, header):
-    ini = turtlebase.general.read_ini_file(settings, header)
-    settings_ini = turtlebase.general.convert_ini_settings_to_dictionary(ini)
-    return settings_ini
-
-
 def main():
     try:
         gp = mainutils.create_geoprocessor()
@@ -77,6 +71,12 @@ def main():
             log.error("input_toetspunten " + peilgebieden_feature + " does not exist!")
             sys.exit(5)
 
+        #----------------------------------------------------------------------------------------
+        #default settings
+        if settings == "#":
+            location_script = os.path.dirname(sys.argv[0])
+            settings = os.path.join(location_script, config.get('RR', 'rr_rrcf_default_settings'))
+
         #checking if feature class contains polygons
         log.info("Checking if feature contains polygons")
         pg_obj = gp.describe(peilgebieden_feature)
@@ -86,14 +86,13 @@ def main():
             sys.exit(5)
 
         # add xy coordinates
-        peilgebied_ini = read_settings_ini(settings, 'column.peilgebied')
-        xcoord = peilgebied_ini['xcoord']
-        ycoord = peilgebied_ini['ycoord']
+        xcoord = 'XCOORD'
+        ycoord = 'YCOORD'
         if not turtlebase.arcgis.is_fieldname(gp, peilgebieden_feature, xcoord):
             gp.addfield(peilgebieden_feature, xcoord, "Double")
         if not turtlebase.arcgis.is_fieldname(gp, peilgebieden_feature, ycoord):
             gp.addfield(peilgebieden_feature, ycoord, "Double")
-        add_xy_coords(peilgebieden_feature, xcoord, ycoord)
+        add_xy_coords(gp, peilgebieden_feature, xcoord, ycoord)
 
         #checking if feature class contains points
         if afvoerkunstwerken != "#":

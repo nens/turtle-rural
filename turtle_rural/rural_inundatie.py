@@ -63,15 +63,13 @@ def main():
         if not os.path.isdir(workspace):
             os.makedirs(workspace)
         workspace_gdb, errorcode = (
-            turtlebase.arcgis.create_temp_geodatabase(gp, workspace)())
+            turtlebase.arcgis.create_temp_geodatabase(gp, workspace))
         if errorcode == 1:
             log.error("failed to create a file geodatabase in %s" % workspace)
 
         # --------------------------------------------------------------------
         # check inputfields
         log.info("Getting commandline parameters... ")
-        for argv in sys.argv[1:]:
-            turtlebase.filenames.check_filename(argv)
 
         if len(sys.argv) == 6:
             input_peilgebieden = sys.argv[1]
@@ -103,7 +101,7 @@ def main():
         log.info('input parameters checked... ')
         # --------------------------------------------------------------------
         # Check geometry input parameters
-        cellsize = config.get('Inundatie', 'cellsize')
+        cellsize = gp.describe(input_ahn_raster).MeanCellHeight
 
         log.info("Check geometry of input parameters")
         geometry_check_list = []
@@ -117,12 +115,6 @@ def main():
         if gp.describe(input_ahn_raster).DataType != 'RasterDataset':
             log.error("Input AHN is not a raster dataset")
             sys.exit(1)
-
-        if gp.describe(input_ahn_raster).MeanCellHeight != float(cellsize):
-            log.error("Cell size of AHN is %s, must be 25",
-                      gp.describe(input_ahn_raster).MeanCellHeight)
-            geometry_check_list.append(input_ahn_raster + " -> (Cellsize %s)",
-                                       cellsize)
 
         if gp.describe(input_ahn_raster).PixelType[0] not in ['U', 'S']:
             log.error("Input AHN is a floating point raster,\
@@ -204,8 +196,8 @@ def main():
             out_raster_dataset = (output_folder_waterlevel + "/ws_%s",
                                   return_period)
             if not gp.exists(out_raster_dataset):
-                gp.FeatureToRaster_conversion(temp_peilgebieden, "WS_%s",
-                                return_period, out_raster_dataset, cellsize)
+                input_field = "WS_%s" % return_period
+                gp.FeatureToRaster_conversion(temp_peilgebieden, input_field, out_raster_dataset, int(cellsize))
             else:
                 log.error("output waterlevel raster already exists,\
                 delete this first or change output folder")

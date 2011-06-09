@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import logging
+import os
 import sys
 import traceback
 
@@ -25,7 +26,7 @@ def main():
 
         #----------------------------------------------------------------------------------------
         # Create workspace
-        workspace = config.get('GENERAL','location_temp')
+        workspace = config.get('GENERAL', 'location_temp')
 
         turtlebase.arcgis.delete_old_workspace_gdb(gp, workspace)
 
@@ -75,19 +76,19 @@ def main():
         missing_fields = []
         if not turtlebase.arcgis.is_fieldname(gp, temp_voronoi, config.get('toetsing_overstorten', 'calculation_point_ident')):
             log.debug(" - missing: %s in %s" % (config.get('toetsing_overstorten', 'calculation_point_ident'), temp_voronoi))
-            missing_fields.append("%s: %s" %(temp_voronoi, config.get('toetsing_overstorten', 'calculation_point_ident')))
+            missing_fields.append("%s: %s" % (temp_voronoi, config.get('toetsing_overstorten', 'calculation_point_ident')))
 
         if not turtlebase.arcgis.is_fieldname(gp, input_rrcf_waterlevel, config.get('toetsing_overstorten', 'field_waterstand')):
             log.debug(" - missing: %s in %s" % (config.get('toetsing_overstorten', 'field_waterstand'), input_rrcf_waterlevel))
-            missing_fields.append("%s: %s" %(input_rrcf_waterlevel, config.get('toetsing_overstorten', 'field_waterstand')))
+            missing_fields.append("%s: %s" % (input_rrcf_waterlevel, config.get('toetsing_overstorten', 'field_waterstand')))
 
         if not turtlebase.arcgis.is_fieldname(gp, input_external_weir, config.get('toetsing_overstorten', 'overstort_ident')):
             log.debug(" - missing: %s in %s" % (config.get('toetsing_overstorten', 'overstort_ident'), input_external_weir))
-            missing_fields.append("%s: %s" %(input_external_weir, config.get('toetsing_overstorten', 'overstort_ident')))
+            missing_fields.append("%s: %s" % (input_external_weir, config.get('toetsing_overstorten', 'overstort_ident')))
 
         if not turtlebase.arcgis.is_fieldname(gp, input_external_weir, config.get('toetsing_overstorten', 'drempelhoogte')):
             log.debug(" - missing: %s in %s" % (config.get('toetsing_overstorten', 'drempelhoogte'), input_external_weir))
-            missing_fields.append("%s: %s" %(input_external_weir, config.get('toetsing_overstorten', 'drempelhoogte')))
+            missing_fields.append("%s: %s" % (input_external_weir, config.get('toetsing_overstorten', 'drempelhoogte')))
 
         if len(missing_fields) > 0:
             log.error("missing fields in input data: %s" % missing_fields)
@@ -123,7 +124,7 @@ def main():
         external_weir_dict = nens.gp.get_table(gp, temp_spatial_join, primary_key=config.get('toetsing_overstorten', 'overstort_ident').lower())
 
         result_dict = {}
-        for k,v in external_weir_dict.items():
+        for k, v in external_weir_dict.items():
             waterlevel = v[config.get('toetsing_overstorten', 'field_waterstand').lower()]
             weir_height = v[config.get('toetsing_overstorten', 'drempelhoogte').lower()]
             if waterlevel is None or weir_height is None:
@@ -180,7 +181,7 @@ def main():
 
             log.info("workspace deleted")
         except:
-            log.warning("failed to delete %s" % workspace_gdb)
+            log.debug("failed to delete %s" % workspace_gdb)
 
         mainutils.log_footer()
     except:

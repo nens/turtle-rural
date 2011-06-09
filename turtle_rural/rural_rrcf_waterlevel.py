@@ -25,7 +25,7 @@ logging_config = LoggingConfig(gp, logfile=logfile)
 mainutils.log_header(__name__)
 
 gpgident = config.get('GENERAL', 'gpgident').lower()
-calculation_id = config.get('rrcf_waterlevel', 'calculation_point_ident').lower()        
+calculation_id = config.get('rrcf_waterlevel', 'calculation_point_ident').lower()
 targetlevel = config.get('rrcf_waterlevel', 'field_targetlevel').lower()
 maxlevel = config.get('rrcf_waterlevel', 'field_maxlevel').lower()
 
@@ -39,8 +39,8 @@ def calculate_waterlevel(input_hymstat, return_period_list, rekenpunten_with_lev
     '''
     hymstat_source = os.path.basename(input_hymstat)
     time_str = time.strftime("%d-%m-%Y %H:%M:%S")
-    
-    hymstat_list =  [d for d in csv.DictReader(open(input_hymstat))]
+
+    hymstat_list = [d for d in csv.DictReader(open(input_hymstat))]
 
     result = {}
 
@@ -60,7 +60,7 @@ def calculate_waterlevel(input_hymstat, return_period_list, rekenpunten_with_lev
 
             alpha = hymstat_dict[hymstat_alpha]
             beta = hymstat_dict[hymstat_beta]
-            result[location] = {calculation_point_id: location ,'date_time' : time_str, 'source': hymstat_source,
+            result[location] = {calculation_point_id: location , 'date_time' : time_str, 'source': hymstat_source,
                                 gpgident: peilgebied_ident, output_targetlevel: streefpeil, maxlevel: afkaphoogte}
             for return_period in return_period_list:
                 if float(alpha) != -999:
@@ -73,14 +73,14 @@ def calculate_waterlevel(input_hymstat, return_period_list, rekenpunten_with_lev
                     if len(comment) > 0:
                         comment = comment + "; ws_%s aangepast" % return_period
                     else:
-                        comment  = "ws_%s aangepast" % return_period
+                        comment = "ws_%s aangepast" % return_period
                 if y < streefpeil:
                     y = streefpeil
                     if len(comment) > 0:
                         comment = comment + "; ws_%s aangepast" % return_period
                     else:
-                        comment  = "ws_%s aangepast" % return_period
-                    
+                        comment = "ws_%s aangepast" % return_period
+
                 result[location]["WS_%s" % return_period] = y
             result[location]['comments'] = comment
     return result
@@ -112,7 +112,7 @@ def add_fields_to_output_table(output_table, fields_to_add, return_period_list):
     add_field(gp, output_table, "DATE_TIME", "text")
     add_field(gp, output_table, "COMMENTS", "text")
 
-    
+
 def is_key_in_dict(rekenpunten_dict, required_fields):
     """
     """
@@ -124,7 +124,7 @@ def is_key_in_dict(rekenpunten_dict, required_fields):
                 missing_keys.append(field)
     return missing_keys
 
-        
+
 def main():
     try:
         #----------------------------------------------------------------------------------------
@@ -141,28 +141,28 @@ def main():
         #----------------------------------------------------------------------------------------
         # check required fields in input
         log.info("Check required fields in input data")
-       
-        missing_fields = []        
+
+        missing_fields = []
         if not turtlebase.arcgis.is_fieldname(gp, input_rekenpunten, calculation_id):
             log.debug(" - missing: %s in %s" % (calculation_id, input_rekenpunten))
-            missing_fields.append("%s: %s" %(input_rekenpunten, calculation_id))
+            missing_fields.append("%s: %s" % (input_rekenpunten, calculation_id))
 
-        if not turtlebase.arcgis.is_fieldname(gp, input_rekenpunten, levelarea_id):
-            log.debug(" - missing: %s in %s" % (levelarea_id, input_rekenpunten))
-            missing_fields.append("%s: %s" %(input_rekenpunten, levelarea_id))
+        if not turtlebase.arcgis.is_fieldname(gp, input_rekenpunten, gpgident):
+            log.debug(" - missing: %s in %s" % (gpgident, input_rekenpunten))
+            missing_fields.append("%s: %s" % (input_rekenpunten, gpgident))
 
-        if not turtlebase.arcgis.is_fieldname(gp, input_rr_peilgebied, levelarea_id):
-            log.debug(" - missing: %s in %s" % (levelarea_id, input_rr_peilgebied))
-            missing_fields.append("%s: %s" %(input_rr_peilgebied, levelarea_id))
+        if not turtlebase.arcgis.is_fieldname(gp, input_rr_peilgebied, gpgident):
+            log.debug(" - missing: %s in %s" % (gpgident, input_rr_peilgebied))
+            missing_fields.append("%s: %s" % (input_rr_peilgebied, gpgident))
 
         if not turtlebase.arcgis.is_fieldname(gp, input_rr_peilgebied, targetlevel):
             log.debug(" - missing: %s in %s" % (targetlevel, input_rr_peilgebied))
-            missing_fields.append("%s: %s" %(input_rr_peilgebied, targetlevel))
+            missing_fields.append("%s: %s" % (input_rr_peilgebied, targetlevel))
 
         if not turtlebase.arcgis.is_fieldname(gp, input_rr_peilgebied, maxlevel):
             log.debug(" - missing: %s in %s" % (maxlevel, input_rr_peilgebied))
-            missing_fields.append("%s: %s" %(input_rr_peilgebied, maxlevel))
-            
+            missing_fields.append("%s: %s" % (input_rr_peilgebied, maxlevel))
+
         if len(missing_fields) > 0:
             log.error("missing fields in input data: %s" % missing_fields)
             sys.exit(2)
@@ -171,35 +171,37 @@ def main():
         log.info("read rekenpunten table")
         rekenpunten_dict = nens.gp.get_table(gp, input_rekenpunten, primary_key=calculation_id)
         log.info("read rr_peilgebied table")
-        rr_peilgebied_dict = nens.gp.get_table(gp, input_rr_peilgebied, primary_key=levelarea_id)
+        rr_peilgebied_dict = nens.gp.get_table(gp, input_rr_peilgebied, primary_key=gpgident)
 
-        missing_fields_in_rekenpunten = is_key_in_dict(rekenpunten_dict, [levelarea_id])
+        missing_fields_in_rekenpunten = is_key_in_dict(rekenpunten_dict, [gpgident])
         if len(missing_fields_in_rekenpunten) > 0:
             log.error("missing fields in input calculation points: %s" % missing_fields_in_rekenpunten)
 
-        missing_fields_in_rr_peilgebied = is_key_in_dict(rr_peilgebied_dict, [levelarea_id, targetlevel, maxlevel])
+        missing_fields_in_rr_peilgebied = is_key_in_dict(rr_peilgebied_dict, [gpgident, targetlevel, maxlevel])
         if len(missing_fields_in_rr_peilgebied) > 0:
             log.error("missing fields in peilgebied table: %s" % missing_fields_in_rr_peilgebied)
 
         rekenpunten_with_levels_dict = {}
-        for k,v in rekenpunten_dict.items():
-            peilgebied_ident = v[levelarea_id]
+        for k, v in rekenpunten_dict.items():
+            peilgebied_ident = v[gpgident]
             if rr_peilgebied_dict.has_key(peilgebied_ident):
                 streefpeil = rr_peilgebied_dict[peilgebied_ident][targetlevel]
                 afkaphoogte = rr_peilgebied_dict[peilgebied_ident][maxlevel]
             else:
                 streefpeil = -999
                 afkaphoogte = 999
-            rekenpunten_with_levels_dict[k] = {levelarea_id: peilgebied_ident,targetlevel: streefpeil, maxlevel: afkaphoogte}
-            
+            rekenpunten_with_levels_dict[k] = {gpgident: peilgebied_ident, targetlevel: streefpeil, maxlevel: afkaphoogte}
+
         #----------------------------------------------------------------------------------------
+        return_periods = config.get('rrcf_waterlevel', 'herhalingstijden')
+        return_period_list = [int(hh) for hh in return_periods.split(', ')]
         result_dict = calculate_waterlevel(input_hymstat, return_period_list, rekenpunten_with_levels_dict)
 
         if not gp.exists(output_table):
             gp.CreateTable_management(os.path.dirname(output_table),
                                        os.path.basename(output_table))
 
-        fields_to_add = {calculation_id:"text", levelarea_id:"text", config.get('rrcf_waterlevel', 'output_targetlevel'):"double", maxlevel: "double"}
+        fields_to_add = {calculation_id:"text", gpgident:"text", config.get('rrcf_waterlevel', 'output_targetlevel'):"double", maxlevel: "double"}
         add_fields_to_output_table(output_table, fields_to_add, return_period_list)
         turtlebase.arcgis.write_result_to_output(output_table, calculation_id, result_dict)
 
@@ -210,4 +212,4 @@ def main():
 
     finally:
         logging_config.cleanup()
-        del gp
+

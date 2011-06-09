@@ -322,6 +322,12 @@ def main():
             peilgebieden_list = nens.gp.get_table(gp, peilgebieden, primary_key=gpgident.lower())
         else:
             log.error("field %s is missing in %s", gpgident, peilgebieden)
+            sys.exit(1)
+
+        if not turtlebase.arcgis.is_fieldname(gp, rekenpunten, gpgident):
+            log.error("field %s is missing in %s", gpgident, rekenpunten)
+            sys.exit(1)
+
         log.info("Controleer of de opgegeven bestandsnamen arcgis compatibel zijn")
 
         for argv in sys.argv[1:]:

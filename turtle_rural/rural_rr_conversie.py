@@ -81,10 +81,9 @@ def main():
             sys.exit(5)
 
         # add xy coordinates
-        peilgebied_ini = mainutils.read_config(os.path.dirname(settings),
-                                               os.path.basename(settings))
-        xcoord = peilgebied_ini.get('column.peilgebied', 'xcoord')
-        ycoord = peilgebied_ini.get('column.peilgebied', 'ycoord')
+        log.info(settings)
+        xcoord = 'XCOORD'
+        ycoord = 'YCOORD'
         if not turtlebase.arcgis.is_fieldname(gp, peilgebieden_feature, xcoord):
             gp.addfield(peilgebieden_feature, xcoord, "Double")
         if not turtlebase.arcgis.is_fieldname(gp, peilgebieden_feature, ycoord):
