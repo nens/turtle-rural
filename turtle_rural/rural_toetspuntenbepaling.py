@@ -128,7 +128,7 @@ def main():
 
         #---------------------------------------------------------------------
         # Check geometry input parameters
-        cellsize = config.get('toetspunten', 'cellsize')
+        cellsize = gp.describe(input_ahn_raster).MeanCellHeight
 
         log.info("Check geometry of input parameters")
         geometry_check_list = []
@@ -167,13 +167,7 @@ def main():
             log.error(errormsg)
             geometry_check_list.append(errormsg)
 
-        if gp.describe(input_ahn_raster).MeanCellHeight != float(cellsize):
-            errormsg = ("Cell size of AHN is %s, must be 25",
-                        gp.describe(input_ahn_raster).MeanCellHeight)
-            log.error(errormsg)
-            geometry_check_list.append(errormsg)
-
-        log.debug(" - check ahn raster %s" % input_lgn_raster)
+        log.debug(" - check lgn raster %s" % input_lgn_raster)
         if gp.describe(input_lgn_raster).DataType != 'RasterDataset':
             log.error("Input LGN is not a raster dataset")
             sys.exit(1)
@@ -185,7 +179,7 @@ def main():
             geometry_check_list.append(errormsg)
 
         if gp.describe(input_lgn_raster).MeanCellHeight != float(cellsize):
-            errormsg = ("Cell size of LGN is %s, must be 25",
+            errormsg = ("Cell size of LGN is %s, must be 25" %
                         gp.describe(input_lgn_raster).MeanCellHeight)
             log.error(errormsg)
             geometry_check_list.append(errormsg)
