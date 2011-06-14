@@ -33,6 +33,7 @@ create-setup:
 	# recipes ignore this option and a site packages may still
 	# end up being used.
 	cp setuptools*.egg ../eggs
+	cp Shapely*.egg ../eggs
 	# we escape the dollar sign in the following sed regular expressions,
 	# see the '$$', otherwise make would try to expand them
 	sed -i 's/\(StrCpy $$PYTHONVERSION[ ][ ]*\).*/\1"$(MAKE_PYTHONVERSION)"/' autogen-turtle-rural.nsi
