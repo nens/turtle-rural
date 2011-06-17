@@ -516,8 +516,17 @@ def main():
             elif turtlebase.arcgis.is_fieldname(gp, temp_fc_union_inundation, "GRID_CODE1"):
                 gp.MakeFeatureLayer_management(temp_fc_union_inundation, dissolve_inundation_lyr, "GRID_CODE1 > 0")
                 gridcode_1 = "grid_code1"
+            elif turtlebase.arcgis.is_fieldname(gp, temp_fc_union_inundation, "GRID_CODE_1"):
+                gp.MakeFeatureLayer_management(temp_fc_union_inundation, dissolve_inundation_lyr, "GRID_CODE_1 > 0")
+                gridcode_1 = "grid_code_1"
+            else:
+                log.error("No field available named gridcode_1 or grid_code1")
+                log.warning(nens.gp.get_table_def(gp, temp_fc_union_inundation))
+                sys.exit(1)
             temp_fc_dissolve_inundation = turtlebase.arcgis.get_random_file_name(workspace_gdb)
-            gp.Dissolve_management(dissolve_inundation_lyr, temp_fc_dissolve_inundation, "%s; %s; %s" % (gpgident_field, gridcode, gridcode_1))
+            dissolve_string = "%s;%s;%s" % (gpgident_field.upper(), gridcode, gridcode_1)
+            log.debug(" - dissolve layer: %s" % dissolve_inundation_lyr)
+            gp.Dissolve_management(dissolve_inundation_lyr, temp_fc_dissolve_inundation, dissolve_string)
 
             # Calculate area inundation
             if not turtlebase.arcgis.is_fieldname(gp, temp_fc_dissolve_inundation, "area_inund"):
@@ -533,23 +542,34 @@ def main():
         # Create feature class from waterdamage grid
         """ values: 10, 15, 25"""
         if output_waterdamage_exists == 0:
-            temp_fc_waterdamage = turtlebase.arcgis.get_random_file_name(workspace_gdb)
-            gp.RasterToPolygon_conversion(output_waterdamage, temp_fc_waterdamage, "NO_SIMPLIFY")
-            temp_fc_union_waterdamage = turtlebase.arcgis.get_random_file_name(workspace_gdb)
-            gp.Union_analysis(temp_fc_dissolve_lgn + ";" + temp_fc_waterdamage, temp_fc_union_waterdamage)
-            dissolve_waterdamage_lyr = turtlebase.arcgis.get_random_layer_name()
-            gp.MakeFeatureLayer_management(temp_fc_union_waterdamage, dissolve_waterdamage_lyr, "%s > 0" % gridcode_1)
-            temp_fc_dissolve_waterdamage = turtlebase.arcgis.get_random_file_name(workspace_gdb)
-            gp.Dissolve_management(dissolve_waterdamage_lyr, temp_fc_dissolve_waterdamage, "%s; %s; %s" % (gpgident_field, gridcode, gridcode_1))
+            try:
+                temp_fc_waterdamage = turtlebase.arcgis.get_random_file_name(workspace_gdb)
+                gp.RasterToPolygon_conversion(output_waterdamage, temp_fc_waterdamage, "NO_SIMPLIFY")
+                waterdamage = True
+            except:
+                log.warning("waterdamage raster is empty")
+                waterdamage = False
 
-            # Calculate area waterdamage
-            if not turtlebase.arcgis.is_fieldname(gp, temp_fc_dissolve_waterdamage, "area_damag"):
-                gp.addfield(temp_fc_dissolve_waterdamage, "area_damag", "Double")
-            turtlebase.arcgis.calculate_area(gp, temp_fc_dissolve_waterdamage, "area_damag")
+            if waterdamage:
+                temp_fc_union_waterdamage = turtlebase.arcgis.get_random_file_name(workspace_gdb)
+                gp.Union_analysis(temp_fc_dissolve_lgn + ";" + temp_fc_waterdamage, temp_fc_union_waterdamage)
 
-            waterdamage_dict = nens.gp.get_table(gp, temp_fc_dissolve_waterdamage)
-            translate_waterdamage_dict = translate_dict(waterdamage_dict, gridcode_1, 'area_damag')
-            log.debug("translate_waterdamage_dict: %s" % translate_waterdamage_dict)
+                dissolve_waterdamage_lyr = turtlebase.arcgis.get_random_layer_name()
+                gp.MakeFeatureLayer_management(temp_fc_union_waterdamage, dissolve_waterdamage_lyr, "%s > 0" % gridcode_1)
+
+                temp_fc_dissolve_waterdamage = turtlebase.arcgis.get_random_file_name(workspace_gdb)
+                gp.Dissolve_management(dissolve_waterdamage_lyr, temp_fc_dissolve_waterdamage, "%s; %s; %s" % (gpgident_field, gridcode, gridcode_1))
+
+                # Calculate area waterdamage
+                if not turtlebase.arcgis.is_fieldname(gp, temp_fc_dissolve_waterdamage, "area_damag"):
+                    gp.addfield(temp_fc_dissolve_waterdamage, "area_damag", "Double")
+                turtlebase.arcgis.calculate_area(gp, temp_fc_dissolve_waterdamage, "area_damag")
+
+                waterdamage_dict = nens.gp.get_table(gp, temp_fc_dissolve_waterdamage)
+                translate_waterdamage_dict = translate_dict(waterdamage_dict, gridcode_1, 'area_damag')
+                log.debug("translate_waterdamage_dict: %s" % translate_waterdamage_dict)
+            else:
+                translate_waterdamage_dict = {}
         else:
             translate_waterdamage_dict = {}
 
@@ -579,74 +599,98 @@ def main():
             toetsing_waterdamage_rural = 9
             toetsing_waterdamage_grass = 9
 
-            hh_i_sted = float(config.get('naverwerking_rrcf', 'herhalingstijd_inundatie_stedelijk'))
-            hh_i_hoogw = float(config.get('naverwerking_rrcf', 'herhalingstijd_inundatie_hoogwaardig'))
-            hh_i_akker = float(config.get('naverwerking_rrcf', 'herhalingstijd_inundatie_akker'))
-            hh_i_gras = float(config.get('naverwerking_rrcf', 'herhalingstijd_inundatie_grasland'))
             if gpgident in translate_inundation_dict:
                 log.debug("Calculate percentage inundation for %s" % gpgident)
 
-                if hh_i_sted in translate_inundation_dict[gpgident]:
-                    area_inundation_urban = translate_inundation_dict[gpgident][hh_i_sted]
-                    area_urban = translate_lgn_dict[gpgident][1]
-                    percentage_inundation_urban = (float(area_inundation_urban) / float(area_urban)) * 100
-                    log.debug(" - urban inundation: %s percent" % percentage_inundation_urban)
-                    toetsing_inundation_urban = toetsing(percentage_inundation_urban, float(config.get('naverwerking_rrcf', 'percentage_inundatie_stedelijk')), no_data_value)
+                try:
+                    hh_i_sted = float(config.get('naverwerking_rrcf', 'herhalingstijd_inundatie_stedelijk'))
+                    if hh_i_sted in translate_inundation_dict[gpgident]:
+                        area_inundation_urban = translate_inundation_dict[gpgident][hh_i_sted]
+                        area_urban = translate_lgn_dict[gpgident][1]
+                        percentage_inundation_urban = (float(area_inundation_urban) / float(area_urban)) * 100
+                        log.debug(" - urban inundation: %s percent" % percentage_inundation_urban)
+                        toetsing_inundation_urban = toetsing(percentage_inundation_urban, float(config.get('naverwerking_rrcf', 'percentage_inundatie_stedelijk')), no_data_value)
+                except:
+                    log.debug("%s is not a float" % config.get('naverwerking_rrcf', 'herhalingstijd_inundatie_stedelijk'))
 
-                if hh_i_hoogw in translate_inundation_dict[gpgident]:
-                    area_inundation_agriculture = translate_inundation_dict[gpgident][hh_i_hoogw]
-                    area_agriculture = translate_lgn_dict[gpgident][2]
-                    percentage_inundation_agriculture = (float(area_inundation_agriculture) / float(area_agriculture)) * 100
-                    log.debug(" - agriculture inundation: %s percent" % percentage_inundation_agriculture)
-                    toetsing_inundation_agriculture = toetsing(percentage_inundation_agriculture, float(config.get('naverwerking_rrcf', 'percentage_inundatie_hoogwaardig')), no_data_value)
+                try:
+                    hh_i_hoogw = float(config.get('naverwerking_rrcf', 'herhalingstijd_inundatie_hoogwaardig'))
+                    if hh_i_hoogw in translate_inundation_dict[gpgident]:
+                        area_inundation_agriculture = translate_inundation_dict[gpgident][hh_i_hoogw]
+                        area_agriculture = translate_lgn_dict[gpgident][2]
+                        percentage_inundation_agriculture = (float(area_inundation_agriculture) / float(area_agriculture)) * 100
+                        log.debug(" - agriculture inundation: %s percent" % percentage_inundation_agriculture)
+                        toetsing_inundation_agriculture = toetsing(percentage_inundation_agriculture, float(config.get('naverwerking_rrcf', 'percentage_inundatie_hoogwaardig')), no_data_value)
+                except:
+                    log.debug("%s is not a float" % config.get('naverwerking_rrcf', 'herhalingstijd_inundatie_hoogwaardig'))
 
-                if hh_i_akker in translate_inundation_dict[gpgident]:
-                    area_inundation_rural = translate_inundation_dict[gpgident][hh_i_akker]
-                    area_rural = translate_lgn_dict[gpgident][3]
-                    percentage_inundation_rural = (float(area_inundation_rural) / float(area_rural)) * 100
-                    log.debug(" - rural inundation: %s percent" % percentage_inundation_rural)
-                    toetsing_inundation_rural = toetsing(percentage_inundation_rural, float(config.get('naverwerking_rrcf', 'percentage_inundatie_akker'), no_data_value))
+                try:
+                    hh_i_akker = float(config.get('naverwerking_rrcf', 'herhalingstijd_inundatie_akker'))
+                    if hh_i_akker in translate_inundation_dict[gpgident]:
+                        area_inundation_rural = translate_inundation_dict[gpgident][hh_i_akker]
+                        area_rural = translate_lgn_dict[gpgident][3]
+                        percentage_inundation_rural = (float(area_inundation_rural) / float(area_rural)) * 100
+                        log.debug(" - rural inundation: %s percent" % percentage_inundation_rural)
+                        toetsing_inundation_rural = toetsing(percentage_inundation_rural, float(config.get('naverwerking_rrcf', 'percentage_inundatie_akker'), no_data_value))
+                except:
+                    log.debug("%s is not a float" % config.get('naverwerking_rrcf', 'herhalingstijd_inundatie_akker'))
 
-                if hh_i_gras in translate_inundation_dict[gpgident]:
-                    area_inundation_grass = translate_inundation_dict[gpgident][hh_i_gras]
-                    area_grass = translate_lgn_dict[gpgident][4]
-                    percentage_inundation_grass = (float(area_inundation_grass) / float(area_grass)) * 100
-                    log.debug(" - grass inundation: %s percent" % percentage_inundation_grass)
-                    toetsing_inundation_grass = toetsing(percentage_inundation_grass, float(config.get('naverwerking_rrcf', 'percentage_inundatie_grasland'), no_data_value))
+                try:
+                    hh_i_gras = float(config.get('naverwerking_rrcf', 'herhalingstijd_inundatie_grasland'))
+                    if hh_i_gras in translate_inundation_dict[gpgident]:
+                        area_inundation_grass = translate_inundation_dict[gpgident][hh_i_gras]
+                        area_grass = translate_lgn_dict[gpgident][4]
+                        percentage_inundation_grass = (float(area_inundation_grass) / float(area_grass)) * 100
+                        log.debug(" - grass inundation: %s percent" % percentage_inundation_grass)
+                        toetsing_inundation_grass = toetsing(percentage_inundation_grass, float(config.get('naverwerking_rrcf', 'percentage_inundatie_grasland'), no_data_value))
+                except:
+                    log.debug("%s is not a float" % config.get('naverwerking_rrcf', 'herhalingstijd_inundatie_grasland'))
 
-            hh_o_sted = float(config.get('naverwerking_rrcf', 'herhalingstijd_overlast_stedelijk'))
-            hh_o_hoogw = float(config.get('naverwerking_rrcf', 'herhalingstijd_overlast_hoogwaardig'))
-            hh_o_akker = float(config.get('naverwerking_rrcf', 'herhalingstijd_overlast_akker'))
-            hh_o_gras = float(config.get('naverwerking_rrcf', 'herhalingstijd_overlast_grasland'))
             if gpgident in translate_waterdamage_dict:
                 log.debug("Calculate percentage waterdamage for %s" % gpgident)
-                if hh_o_sted in translate_waterdamage_dict[gpgident]:
-                    area_waterdamage_urban = translate_waterdamage_dict[gpgident][hh_o_sted]
-                    area_urban = translate_lgn_dict[gpgident][1]
-                    percentage_waterdamage_urban = (float(area_waterdamage_urban) / float(area_urban)) * 100
-                    log.debug(" - urban waterdamage: %s percent" % percentage_waterdamage_urban)
-                    toetsing_inundation_agriculture = toetsing(percentage_waterdamage_urban, float(config.get('naverwerking_rrcf', 'percentage_overlast_stedelijk')), no_data_value)
+                try:
+                    hh_o_sted = float(config.get('naverwerking_rrcf', 'herhalingstijd_overlast_stedelijk'))
+                    if hh_o_sted in translate_waterdamage_dict[gpgident]:
+                        area_waterdamage_urban = translate_waterdamage_dict[gpgident][hh_o_sted]
+                        area_urban = translate_lgn_dict[gpgident][1]
+                        percentage_waterdamage_urban = (float(area_waterdamage_urban) / float(area_urban)) * 100
+                        log.debug(" - urban waterdamage: %s percent" % percentage_waterdamage_urban)
+                        toetsing_inundation_agriculture = toetsing(percentage_waterdamage_urban, float(config.get('naverwerking_rrcf', 'percentage_overlast_stedelijk')), no_data_value)
+                except:
+                    log.debug("%s is not a float" % config.get('naverwerking_rrcf', 'herhalingstijd_overlast_stedelijk'))
 
-                if hh_o_hoogw in translate_waterdamage_dict[gpgident]:
-                    area_waterdamage_agriculture = translate_waterdamage_dict[gpgident][hh_o_hoogw]
-                    area_agriculture = translate_lgn_dict[gpgident][2]
-                    percentage_waterdamage_agriculture = (float(area_waterdamage_agriculture) / float(area_agriculture)) * 100
-                    log.debug(" - agriculture waterdamage: %s percent" % percentage_waterdamage_agriculture)
-                    toetsing_inundation_agriculture = toetsing(percentage_waterdamage_agriculture, float(config.get('naverwerking_rrcf', 'percentage_overlast_hoogwaardig')), no_data_value)
+                try:
+                    hh_o_hoogw = float(config.get('naverwerking_rrcf', 'herhalingstijd_overlast_hoogwaardig'))
+                    if hh_o_hoogw in translate_waterdamage_dict[gpgident]:
+                        area_waterdamage_agriculture = translate_waterdamage_dict[gpgident][hh_o_hoogw]
+                        area_agriculture = translate_lgn_dict[gpgident][2]
+                        percentage_waterdamage_agriculture = (float(area_waterdamage_agriculture) / float(area_agriculture)) * 100
+                        log.debug(" - agriculture waterdamage: %s percent" % percentage_waterdamage_agriculture)
+                        toetsing_inundation_agriculture = toetsing(percentage_waterdamage_agriculture, float(config.get('naverwerking_rrcf', 'percentage_overlast_hoogwaardig')), no_data_value)
+                except:
+                    log.debug("%s is not a float" % config.get('naverwerking_rrcf', 'herhalingstijd_overlast_hoogwaardig'))
 
-                if hh_o_akker in translate_waterdamage_dict[gpgident]:
-                    area_waterdamage_rural = translate_waterdamage_dict[gpgident][hh_o_akker]
-                    area_rural = translate_lgn_dict[gpgident][3]
-                    percentage_waterdamage_rural = (float(area_waterdamage_rural) / float(area_rural)) * 100
-                    log.debug(" - rural waterdamage: %s percent" % percentage_waterdamage_rural)
-                    toetsing_waterdamage_rural = toetsing(percentage_waterdamage_rural, float(config.get('naverwerking_rrcf', 'percentage_overlast_akker')), no_data_value)
+                try:
+                    hh_o_akker = float(config.get('naverwerking_rrcf', 'herhalingstijd_overlast_grasland'))
+                    if hh_o_akker in translate_waterdamage_dict[gpgident]:
+                        area_waterdamage_rural = translate_waterdamage_dict[gpgident][hh_o_akker]
+                        area_rural = translate_lgn_dict[gpgident][3]
+                        percentage_waterdamage_rural = (float(area_waterdamage_rural) / float(area_rural)) * 100
+                        log.debug(" - rural waterdamage: %s percent" % percentage_waterdamage_rural)
+                        toetsing_waterdamage_rural = toetsing(percentage_waterdamage_rural, float(config.get('naverwerking_rrcf', 'percentage_overlast_akker')), no_data_value)
+                except:
+                    log.debug("%s is not a float" % config.get('naverwerking_rrcf', 'herhalingstijd_overlast_grasland'))
 
-                if hh_o_gras in translate_waterdamage_dict[gpgident]:
-                    area_waterdamage_grass = translate_waterdamage_dict[gpgident][float(config.get('naverwerking_rrcf', 'herhalingstijd_overlast_grasland'))]
-                    area_grass = translate_lgn_dict[gpgident][4]
-                    percentage_waterdamage_grass = (float(area_waterdamage_grass) / float(area_grass)) * 100
-                    log.debug(" - grass waterdamage: %s percent" % percentage_waterdamage_grass)
-                    toetsing_waterdamage_grass = toetsing(percentage_waterdamage_grass, float(config.get('naverwerking_rrcf', 'percentage_overlast_grasland')), no_data_value)
+                try:
+                    hh_o_gras = float(config.get('naverwerking_rrcf', 'herhalingstijd_overlast_grasland'))
+                    if hh_o_gras in translate_waterdamage_dict[gpgident]:
+                        area_waterdamage_grass = translate_waterdamage_dict[gpgident][float(config.get('naverwerking_rrcf', 'herhalingstijd_overlast_grasland'))]
+                        area_grass = translate_lgn_dict[gpgident][4]
+                        percentage_waterdamage_grass = (float(area_waterdamage_grass) / float(area_grass)) * 100
+                        log.debug(" - grass waterdamage: %s percent" % percentage_waterdamage_grass)
+                        toetsing_waterdamage_grass = toetsing(percentage_waterdamage_grass, float(config.get('naverwerking_rrcf', 'percentage_overlast_grasland')), no_data_value)
+                except:
+                    log.debug("%s is not a float" % config.get('naverwerking_rrcf', 'herhalingstijd_overlast_grasland'))
 
             result_dict[gpgident] = {
                     gpgident_field: gpgident,
