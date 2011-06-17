@@ -34,7 +34,7 @@ boundary_str = config.get('afvoerendoppervlak', 'boundary_str')
 afvoer_van = config.get('afvoerendoppervlak', 'afvoer_van').lower()
 afvoer_naar = config.get('afvoerendoppervlak', 'afvoer_naar').lower()
 afvoer_percentage = config.get('afvoerendoppervlak', 'afvoer_percentage').lower()
-gpg_depth = config.get('afvoerendoppervlak', 'gpg_depth')
+gpg_depth = config.get('afvoerendoppervlak', 'gpg_depth').lower()
 kwk_kwerk = config.get('afvoerendoppervlak', 'kwk_kwerk').lower()
 kwk_keyword_gemaal = config.get('afvoerendoppervlak', 'kwk_keyword_gemaal')
 kwk_keyword_stuw = config.get('afvoerendoppervlak', 'kwk_keyword_stuw')
@@ -44,19 +44,19 @@ gpg_afvoerendoppervlak = config.get('afvoerendoppervlak', 'gpg_afvoerendoppervla
 gpg_afvoercap_ha = config.get('afvoerendoppervlak', 'gpg_afvoercap_ha')
 
 
-def calc_afv_opp_rec(gpg_ident, kwk_base, oppervlak_data, afvoer_data, pg_data_output, pg_passed, pg_route, pg_loops):
+def calc_afv_opp_rec (gpg_ident, kwk_base, oppervlak_data, afvoer_data, pg_data_output, pg_passed, pg_route, pg_loops):
     '''
     calculate afvoerend oppervlak in a recursive way; handles cycles as well
     '''
     try:
         #the afvoerend opp has already been calculated for this pg
-        pg_passed[gpg_ident][kwk_base] = 1 # if this doesn't work, the key gpg_ident does not exist and we go the the except part
+        pg_passed[value[afvoer_van]][kwk_base] = 1 # if this doesn't work, the key value[ini['afvoer_van']] does not exist and we go the the except part
         return pg_data_output[gpg_ident][gpg_afvoerendoppervlak]
     except:
         log.debug(" summing for " + gpg_ident)
         #we must calculate it now
         sum_from = 0
-        #search for kw's from, and calc sum_from
+        #search for kw's from, and calc sum_from    
         for kwk_ident, value in afvoer_data.items():
             if value[afvoer_naar] == gpg_ident:
                 if not(pg_passed.has_key(value[afvoer_van])):
@@ -65,7 +65,7 @@ def calc_afv_opp_rec(gpg_ident, kwk_base, oppervlak_data, afvoer_data, pg_data_o
                 try:
                     #try to find afvoer_van in pg_route.
                     #if it succeeds, the node has been visited already and there is a cycle
-                    #a = pg_route.index(value[afvoer_van])
+                    a = pg_route.index(value[afvoer_van])
                     #uncomment this can cause almost-infinite-loop
                     log.debug(" - Warning: cycle, ignoring second time gpg_ident " + value[afvoer_van] + " on kwk_ident boundary " + kwk_base)
                     pg_loops[value[afvoer_van]] = 1
@@ -175,6 +175,8 @@ def main():
                             log.debug(gpg_ident + " -> depth " + str(pg_data_depth[kw[afvoer_naar]] + 1))
                             changed = True
         #convert pg_data_depth to str in pg_data_output
+        log.debug("data depth: %s" % pg_data_depth)
+        log.debug("data output: %s" % pg_data_output)
         for gpg_ident, value in pg_data_depth.items():
             pg_data_output[gpg_ident][gpg_depth] = 'trap_%s' % value
 
@@ -250,7 +252,6 @@ def main():
                                 gpg_date: {'type': 'TEXT'}}
 
         log.info("C) writing to output")
-        log.info(pg_data_output)
         for fieldname, values in fieldsOpp.items():
             if not turtlebase.arcgis.is_fieldname(gp, output_peilgebied, fieldname):
                 gp.AddField_management(output_peilgebied, fieldname, values['type'])
