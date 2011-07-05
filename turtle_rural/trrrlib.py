@@ -1,21 +1,37 @@
-# (c) Nelen & Schuurmans. GPL licensed, see LICENSE.txt
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
+#***********************************************************************
+#*
+#***********************************************************************
+#*                      All rights reserved                           **
+#*
+#*
+#*                                                                    **
+#*
+#*
+#*
+#***********************************************************************
+#* Library    : the main module for RR Conversion
+#*
+#* Project    : various
+#*
+#* $Id$
+#*
+#* initial programmer :  Mario Frasca
+#* initial date       :  2008-06-10
+#**********************************************************************
 
-from ConfigParser import ConfigParser
-import datetime
+__revision__ = "$Rev$"[6:-2]
+
 import logging
-import os
-import re
+if __name__ == '__main__':
+    logging.basicConfig()
+
+log = logging.getLogger('nens.trrrlib')
+log.setLevel(logging.DEBUG)
+log.debug('loading module (%s)' % __revision__)
+
 import types
-
-try:
-    import arcgisscripting
-except:
-    arcgisscripting = None
-import nens.gp
-import networkx
-
-log = logging.getLogger(__name__)
 
 settings = None
 
@@ -24,6 +40,7 @@ def Config(filename):
     """gets the name of a windows INI file and reads the file into a ConfigParser.ConfigParser instance
     """
 
+    from ConfigParser import ConfigParser
     config = ConfigParser()
     config.readfp(file(filename))
     return config
@@ -33,7 +50,7 @@ def kwelwegzijging(wat_is_het, waarde):
     if wat_is_het == settings.get('dictionary.peilgebied.kwel_wegzijging', 'kwel'):
         return abs(waarde)
     elif wat_is_het == settings.get('dictionary.peilgebied.kwel_wegzijging', 'wegzijging'):
-        return -abs(waarde)
+        return - abs(waarde)
     return waarde
 
 
@@ -69,6 +86,7 @@ def checkConstraints(obj, field_name, settings):
     W(min, max) - this is a weak constraint: logs a warning, but returns True.
     """
 
+    import re
     pattern = re.compile(r'^([a-z]?)\(([-0-9\.]+)[ ,]+([-0-9\.]+)\)$', re.I)
 
     result = True
@@ -137,6 +155,7 @@ def checkConstraints(obj, field_name, settings):
             if i == 'mmdd':
                 month, day = ivalue / 100, ivalue % 100
             try:
+                import datetime
                 datetime.datetime(2000, month, day)
                 ok = True
             except ValueError:
@@ -180,6 +199,7 @@ def splitConstraints(s):
     splitTypeDef("(-, 100)") ['(-, 100)']
     '''
 
+    import re
     p = re.compile(r'^((?:[a-z]+(?:\([^\)]*\))?|(?:\([^\)]*\))))[ ]*', re.I)
     result = []
     while p.match(s):
@@ -195,6 +215,7 @@ def createPool(output_dir='.'):
 
     log.debug("writing to output - creating pool")
     retval = {}
+    import os
     sep = os.sep
 
     # Boundaries
@@ -286,12 +307,27 @@ def closePool(pool):
     log.debug("writing to output - flushing/closing pool")
     return [i.close() for i in pool.values()]
 
+# met NX versie 0.99 vervalt XDiGraph (graphs waar men informatie bij
+# een edge kan toevoegen) want het toevoegen van informatie bij een
+# edge wordt bij alle graphs mogelijk.
+#
+# het verschil is dat 'nieuwe' edges zijn altijd 2-tuples, terwijl
+# 'oude' edges waren 2-tuples bij graphs zonder extra informatie en
+# 3-tuples bij graphs met extra informatie.  in beide versies kan men
+# de informatie uit een edge halen door graph_object.get_edge(start,
+# end) te roepen.
+#
+# in beide gevallen, edge[:2] bevat begin en end node.
+#
+import networkx
+
+import nens.gp
 
 # from TWiki page...  hard coded but dependent on model
 required_fields = {
     'peilgebied': ['id', 'ycoord', 'xcoord', 'total_area',
                    'verhard_area', 'OnverhardSted_area', 'kas_area',
-                   'OnverhardLand_area', 'openwater_area', ],
+                   'OnverhardLand_area', 'openwater_area', 'paved_runoff_coefficient', ],
     'kunstwerk': ['id', ],
     }
 
@@ -356,7 +392,6 @@ class Dict(object):
 def dict_to_Dict(obj):
     """Convert a dict (from networkx) back into a Dict subclass."""
     return obj['real']
-
 # "node" classes.  sobek keyword: NODE
 
 
@@ -551,23 +586,23 @@ class Onverhard(SobekNode):
 
         if peilgebied['DiepteLaaggrens34' + suffix] > 0:
             # we hebben 4 lagen
-            weerstanden = (peilgebied[prefix + 'Laag1' + suffix], peilgebied[prefix + 'Laag2' + suffix], peilgebied[prefix + 'Laag3' + suffix], peilgebied[prefix + 'Laag4' + suffix], )
-            dieptes = (peilgebied['DiepteLaaggrens12' + suffix], peilgebied['DiepteLaaggrens23' + suffix], peilgebied['DiepteLaaggrens34' + suffix], )
+            weerstanden = (peilgebied[prefix + 'Laag1' + suffix], peilgebied[prefix + 'Laag2' + suffix], peilgebied[prefix + 'Laag3' + suffix], peilgebied[prefix + 'Laag4' + suffix],)
+            dieptes = (peilgebied['DiepteLaaggrens12' + suffix], peilgebied['DiepteLaaggrens23' + suffix], peilgebied['DiepteLaaggrens34' + suffix],)
 
         elif peilgebied['DiepteLaaggrens23' + suffix] > 0:
             # we hebben 3 lagen
-            weerstanden = (peilgebied[prefix + 'Laag1' + suffix], peilgebied[prefix + 'Laag1' + suffix], peilgebied[prefix + 'Laag2' + suffix], peilgebied[prefix + 'Laag3' + suffix], )
-            dieptes = (0, peilgebied['DiepteLaaggrens12' + suffix], peilgebied['DiepteLaaggrens23' + suffix], )
+            weerstanden = (peilgebied[prefix + 'Laag1' + suffix], peilgebied[prefix + 'Laag1' + suffix], peilgebied[prefix + 'Laag2' + suffix], peilgebied[prefix + 'Laag3' + suffix],)
+            dieptes = (0, peilgebied['DiepteLaaggrens12' + suffix], peilgebied['DiepteLaaggrens23' + suffix],)
 
         elif peilgebied['DiepteLaaggrens12' + suffix] > 0:
             # we hebben 2 lagen
-            weerstanden = (peilgebied[prefix + 'Laag1' + suffix], peilgebied[prefix + 'Laag1' + suffix], peilgebied[prefix + 'Laag1' + suffix], peilgebied[prefix + 'Laag2' + suffix], )
-            dieptes = (0, 0, peilgebied['DiepteLaaggrens12' + suffix], )
+            weerstanden = (peilgebied[prefix + 'Laag1' + suffix], peilgebied[prefix + 'Laag1' + suffix], peilgebied[prefix + 'Laag1' + suffix], peilgebied[prefix + 'Laag2' + suffix],)
+            dieptes = (0, 0, peilgebied['DiepteLaaggrens12' + suffix],)
 
         else:
             # we hebben één laag
-            weerstanden = (peilgebied[prefix + 'Laag1' + suffix], peilgebied[prefix + 'Laag1' + suffix], peilgebied[prefix + 'Laag1' + suffix], peilgebied[prefix + 'Laag1' + suffix], )
-            dieptes = (0, 0, 0, )
+            weerstanden = (peilgebied[prefix + 'Laag1' + suffix], peilgebied[prefix + 'Laag1' + suffix], peilgebied[prefix + 'Laag1' + suffix], peilgebied[prefix + 'Laag1' + suffix],)
+            dieptes = (0, 0, 0,)
 
         self['ws_0'], self['ws_1'], self['ws_2'], self['ws_3'] = weerstanden
         self['dp_0'], self['dp_1'], self['dp_2'] = dieptes
@@ -605,7 +640,7 @@ class OnverhardSted(Onverhard):
         self['ycoord'] -= 25
         self.update({
                 'area': int(peilgebied['onverhardsted_area'] * 10000),
-                'groundw_area': int(peilgebied['shape_area'] -  # also compensate paved
+                'groundw_area': int(peilgebied['shape_area'] - # also compensate paved
                                     (peilgebied['openwater_area'] + peilgebied['OnverhardLand_area']) * 10000),
                 'use_scurve': False,
                 'land_storage': peilgebied['maxBergingSted'],
@@ -637,11 +672,12 @@ class Verhard(SobekNode):
                 'xcoord': peilgebied['xcoord'] - 25,
                 'ycoord': peilgebied['ycoord'],
                 'ini_salt_concentration': peilgebied['iniSaltConc'],
-                'sewer_system_type': 0,  # missing value - geen riolering
+                'sewer_system_type': 0, # missing value - geen riolering
                 'vgs_cap': 0,
                 'sewer_storage': 0,
                 'initial_sewer_storage': peilgebied['bergingRioolIni'],
                 'street_storage': peilgebied['maxBergingStraat'],
+                'paved_runoff_coefficient': peilgebied['paved_runoff_coefficient'],
                 })
 
         if peilgebied['typeriool'].lower() == settings.get('dictionary.peilgebied.typeRiool', 'mixed').lower():
@@ -812,6 +848,7 @@ class OpenWater(SobekNode):
 
             # yyyy-01-01_ yyyy-m1-d1_ yyyy-m2-d2^ yyyy-m3-d3^ yyyy-m4-d4_
 
+            import datetime
             duur = datetime.timedelta(self['overgangstijd_ZP_WP_dgn'])
             if settings.get('range.peilgebied', 'datumWinterZomer').lower() == 'mmdd':
                 maand = self['date_winzom'] / 100
@@ -1151,6 +1188,7 @@ def main(options, args):
     # the following three steps are necessary to connect to ArcView...
     # failing to do these, it will fail with rather obscure error messages...
 
+    import arcgisscripting
     gp = arcgisscripting.create()
     gp.setproduct("ArcView")
 
@@ -1219,7 +1257,7 @@ def main(options, args):
             item = nens.gp.get_table(
                 gp, item_name,
                 conversion=settings.items('column.peilgebied'))
-            log.debug("%d rows and %d columns for table '%s'" % (len(item), len((item + [{}])[0]), item_name, ))
+            log.debug("%d rows and %d columns for table '%s'" % (len(item), len((item + [{}])[0]), item_name,))
 
             # join it to our data
             peilgebieden = nens.gp.join_dicts(peilgebieden, item, 'id')
@@ -1277,7 +1315,7 @@ def main(options, args):
                 gp, kunstwerken_name,
                 conversion=settings.items('column.kunstwerk'))
             kunstwerken = nens.gp.join_dicts(afvoer, kunstwerken, 'id')
-            log.debug("%d rows and %d columns for table '%s'" % (len(kunstwerken), len((kunstwerken + [{}])[0]), kunstwerken_name, ))
+            log.debug("%d rows and %d columns for table '%s'" % (len(kunstwerken), len((kunstwerken + [{}])[0]), kunstwerken_name,))
         else:
             kunstwerken = afvoer
 
@@ -1350,7 +1388,7 @@ def main(options, args):
                 # koppelpunt_name is None if model is RR or if, in
                 # RR+RR_CF model with cfDirect, no "knoop" has been
                 # specified for this type for this peilgebied
-                log.debug("evaluates cfDirect field %s(%s) to True? %s" % (type(peilgebied['cfDirect']), peilgebied['cfDirect'], bool(peilgebied['cfDirect']), ))
+                log.debug("evaluates cfDirect field %s(%s) to True? %s" % (type(peilgebied['cfDirect']), peilgebied['cfDirect'], bool(peilgebied['cfDirect']),))
                 if peilgebied['cfDirect']:
                     koppelpunt_name = peilgebied.get(type_name + '_knoop', missingnode_name)
                     log.debug('looking into peilgebied %s for field %s, got %s(%s)' % (peilgebied['id'], type_name + '_knoop', type(koppelpunt_name), koppelpunt_name,))
@@ -1535,7 +1573,7 @@ def main(options, args):
         log.debug("node (%s)" % (node,))
     for edge in g.edges():
         (bn, en) = edge[:2]
-        log.debug("edge (%s)->(%s)" % (bn['id'], en['id'], ))
+        log.debug("edge (%s)->(%s)" % (bn['id'], en['id'],))
 
     log.debug('...verbose form:')
     for node in g.nodes():
@@ -1552,8 +1590,12 @@ def main(options, args):
         node.write(pool)
     for edge in g.edges():
         (bn, en) = edge[:2]
-        info = g[bn][en]  # Pre-1.0: g.get_edge(bn, en)
+        info = g[bn][en]
         info = dict_to_Dict(info)
         info.write(pool)
     closePool(pool)
     log.info("output written.")
+
+
+if __name__ == '__main__':
+    log.warn("module loaded, no tests defined, no action taken.")

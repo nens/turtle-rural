@@ -1,4 +1,4 @@
-#Mon Jun 20 11:45:55 CEST 2011
+#Tue Jul 05 16:35:27 CEST 2011
 eclipse.preferences.version=1
 encoding//local_checkouts/py-nens/nens/geom.py=utf-8
 encoding//local_checkouts/py-nens/nens/gp.py=utf-8
@@ -41,4 +41,5 @@ encoding//turtle_rural/rural_testscripts.py=utf-8
 encoding//turtle_rural/rural_toetsing_overstorten.py=utf-8
 encoding//turtle_rural/rural_toetspuntenbepaling.py=utf-8
 encoding//turtle_rural/rural_voronoi_polygons.py=utf-8
+encoding//turtle_rural/trrrlib.py=utf-8
 encoding//turtle_rural/turtlebase_graph.py=utf-8
