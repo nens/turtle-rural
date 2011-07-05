@@ -108,7 +108,7 @@ def main():
         gp.select_analysis(input_voronoi_polygon, temp_voronoi)
 
         # Check geometry input parameters
-        cellsize = config.get('naverwerking_rrcf', 'cellsize')
+        cellsize = gp.describe(input_ahn_raster).MeanCellHeight
 
         log.info("Check geometry of input parameters")
         geometry_check_list = []
@@ -132,10 +132,6 @@ def main():
         if gp.describe(input_ahn_raster).PixelType[0] not in ['U', 'S']:
             log.error("Input AHN is a floating point raster, for this script an integer is nessecary")
             geometry_check_list.append(input_ahn_raster + " -> (Integer)")
-
-        if gp.describe(input_ahn_raster).MeanCellHeight != float(cellsize):
-            log.error("Cell size of AHN is %s, must be 25" % gp.describe(input_ahn_raster).MeanCellHeight)
-            geometry_check_list.append(input_ahn_raster + " -> (Cellsize %s)" % cellsize)
 
         log.debug(" - check lgn raster %s" % input_lgn_raster)
         if gp.describe(input_lgn_raster).DataType != 'RasterDataset':
@@ -271,7 +267,7 @@ def main():
         # inundatie stedelijk
         return_period_urban = config.get('naverwerking_rrcf', 'herhalingstijd_inundatie_stedelijk')
         if config.get('naverwerking_rrcf', 'percentage_inundatie_stedelijk') != "-":
-            log.debug(" - create inundation urban")
+            log.info(" - create inundation urban")
             waterlevel = "%s/ws_%s" % (workspace_gdb, return_period_urban)
             if gp.exists(waterlevel):
                 inundation_urban = turtlebase.arcgis.get_random_file_name(workspace, ".asc")
@@ -290,7 +286,7 @@ def main():
         # inundatie hoogwaardige landbouw
         return_period_agriculture = config.get('naverwerking_rrcf', 'herhalingstijd_inundatie_hoogwaardig')
         if config.get('naverwerking_rrcf', 'percentage_inundatie_hoogwaardig') != "-":
-            log.debug(" - create inundation agriculture")
+            log.info(" - create inundation agriculture")
             waterlevel = "%s/ws_%s" % (workspace_gdb, return_period_agriculture)
             if gp.exists(waterlevel):
                 # Inundation with lgn
@@ -310,7 +306,7 @@ def main():
         # inundatie akkerbouw
         return_period_rural = config.get('naverwerking_rrcf', 'herhalingstijd_inundatie_akker')
         if config.get('naverwerking_rrcf', 'percentage_inundatie_akker') != "-":
-            log.debug(" - create inundation rural")
+            log.info(" - create inundation rural")
             waterlevel = "%s/ws_%s" % (workspace_gdb, return_period_rural)
             if gp.exists(waterlevel):
                 inundation_rural = turtlebase.arcgis.get_random_file_name(workspace, ".asc")
@@ -329,9 +325,10 @@ def main():
         # inundatie grasland
         return_period_grass = config.get('naverwerking_rrcf', 'herhalingstijd_inundatie_grasland')
         if config.get('naverwerking_rrcf', 'percentage_inundatie_grasland') != "-":
-            log.debug(" - create inundation grass")
+            log.info(" - create inundation grass")
             waterlevel = "%s/ws_%s" % (workspace_gdb, return_period_grass)
             if gp.exists(waterlevel):
+                log.info("waterlevel grasland = %s" % waterlevel)
                 inundation_grass = turtlebase.arcgis.get_random_file_name(workspace, ".asc")
                 turtlebase.spatial.create_inundation_raster(lgn_k5_ascii, ahn_ascii, waterlevel,
                                                            4, return_period_grass, inundation_grass, workspace, use_lgn=True)
@@ -347,6 +344,7 @@ def main():
 
         if len(inundation_raster_list) > 1:
             log.info("Merge inundation rasters")
+            log.info(inundation_raster_list)
             output_inundation_exists = turtlebase.spatial.merge_ascii(inundation_raster_list, output_inundation, workspace)
         else:
             log.error("there are no inundation rasters available")
@@ -365,7 +363,7 @@ def main():
         # overlast stedelijk
         return_period_urban_damage = config.get('naverwerking_rrcf', 'herhalingstijd_overlast_stedelijk')
         if config.get('naverwerking_rrcf', 'percentage_overlast_stedelijk') != "-":
-            log.debug(" - create waterdamage urban")
+            log.info(" - create waterdamage urban")
             waterlevel = "%s/ws_%s" % (workspace_gdb, return_period_urban_damage)
             if gp.exists(waterlevel):
                 damage_urban = turtlebase.arcgis.get_random_file_name(workspace, ".asc")
@@ -384,7 +382,7 @@ def main():
         # overlast hoogwaardig
         return_period_agriculture_damage = config.get('naverwerking_rrcf', 'herhalingstijd_overlast_hoogwaardig')
         if config.get('naverwerking_rrcf', 'percentage_overlast_hoogwaardig') != "-":
-            log.debug(" - create waterdamage intensive agriculture")
+            log.info(" - create waterdamage agriculture")
             waterlevel = "%s/ws_%s" % (workspace_gdb, return_period_agriculture_damage)
             if gp.exists(waterlevel):
                 damage_agriculture = workspace + "/damage_agri_%s.asc" % return_period_agriculture_damage
@@ -403,7 +401,7 @@ def main():
         # overlast akker
         return_period_rural_damage = config.get('naverwerking_rrcf', 'herhalingstijd_overlast_akker')
         if config.get('naverwerking_rrcf', 'percentage_overlast_akker') != "-":
-            log.debug(" - create waterdamage rural")
+            log.info(" - create waterdamage rural")
             waterlevel = "%s/ws_%s" % (workspace_gdb, return_period_rural_damage)
             if gp.exists(waterlevel):
                 damage_rural = workspace + "/damage_rural_%s.asc" % return_period_rural_damage
@@ -422,7 +420,7 @@ def main():
         # overlast grasland
         return_period_grass_damage = config.get('naverwerking_rrcf', 'herhalingstijd_overlast_grasland')
         if config.get('naverwerking_rrcf', 'percentage_overlast_grasland') != "-":
-            log.debug(" - create waterdamage grass")
+            log.info(" - create waterdamage grass")
             waterlevel = "%s/ws_%s" % (workspace_gdb, return_period_grass_damage)
             if gp.exists(waterlevel):
                 damage_grass = turtlebase.arcgis.get_random_file_name(workspace, ".asc")

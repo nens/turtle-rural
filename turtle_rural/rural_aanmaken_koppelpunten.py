@@ -51,8 +51,8 @@ def create_point_file_from_dict(gp, centroid_dict, output_centroid_file, peilgeb
     for peilgebied in centroid_dict:
         newfeat = rows_out.NewRow()
         punt = centroid_dict[peilgebied].split(' ')
-        pnt.X = float(punt[0])
-        pnt.Y = float(punt[1])
+        pnt.X = float(punt[0].replace(",", "."))
+        pnt.Y = float(punt[1].replace(",", "."))
         newfeat.shape = pnt
         newfeat.SetValue(peilgebied_id, peilgebied)
         rows_out.InsertRow(newfeat)
@@ -64,8 +64,8 @@ def read_coordinates_from_string(coord_string):
         returns de x en y as floating point
         '''
     coord_spl = coord_string.split(' ')
-    x = float(coord_spl[0])
-    y = float(coord_spl[1])
+    x = float(coord_spl[0].replace(",", "."))
+    y = float(coord_spl[1].replace(",", "."))
     return x, y
 
 
