@@ -80,3 +80,4 @@ def create_cross_section_graph(gp, profile_yz, output_folder):
                                     profile_name, datum_data))
         pylab.grid(True)
         pylab.savefig('%s\\%s.png' % (output_folder, profile_name))
+
