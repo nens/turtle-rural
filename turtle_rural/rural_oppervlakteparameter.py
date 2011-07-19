@@ -158,7 +158,7 @@ def main():
         # 2b) intersect(lgn+peilgebieden)
         log.info("B) Intersect lgn_shape + tempfile_peilgebied -> lgn_peilgebieden")
         intersect_temp = turtlebase.arcgis.get_random_file_name(workspace_gdb)
-        gp.Intersect_analysis(temp_lgn_fc + " ;" + peilgebieden_temp, intersect_temp)
+        gp.Intersect_analysis("%s;%s" % (temp_lgn_fc, peilgebieden_temp), intersect_temp)
 
         # 3a) Read conversiontable into memory"
         log.info("C-1) Read conversiontable into memory")
@@ -214,7 +214,7 @@ def main():
             # 1) intersect(watershape+peilgebieden)
             log.info("- intersect water_shape + tempfile_peilgebied -> watershape_peilgebieden")
             watershape_intersect = turtlebase.arcgis.get_random_file_name(workspace_gdb)
-            gp.Intersect_analysis(input_watershape + " ;" + peilgebieden_temp, watershape_intersect)
+            gp.Intersect_analysis("%s;%s" % (input_watershape, peilgebieden_temp), watershape_intersect)
 
             source_watershape = os.path.basename(input_watershape)
             if len(source_watershape) > 50:
