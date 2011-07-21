@@ -28,7 +28,7 @@ def main():
 
         #----------------------------------------------------------------------------------------
         # Create workspace
-        workspace = config.get('GENERAL','location_temp')
+        workspace = config.get('GENERAL', 'location_temp')
         turtlebase.arcgis.delete_old_workspace_gdb(gp, workspace)
 
         if not os.path.isdir(workspace):
@@ -36,7 +36,7 @@ def main():
         workspace_gdb, errorcode = turtlebase.arcgis.create_temp_geodatabase(gp, workspace)
         if errorcode == 1:
             log.error("failed to create a file geodatabase in %s" % workspace)
-        
+
         #----------------------------------------------------------------------------------------
         # Input parameters
         if len(sys.argv) == 11:
@@ -50,12 +50,40 @@ def main():
             input_hymstat = sys.argv[7]
             output_risk_table = sys.argv[8]
             output_risico = sys.argv[9]
-            output_risico_inundation = sys.argv[10]            
+            output_risico_inundation = sys.argv[10]
         else:
             log.error("usage: <peilgebied> <input_rr_peilgebied> <input_rr_maaiveld> <input_ahn> <input_lgn>\
                       <conversion> <input_hymstat> <output_risk_table> <output_risico> <output_risico_inundation>")
             sys.exit(1)
 
+        #----------------------------------------------------------------------------------------
+        log.info(" - read Conversion table")
+        conv_list = [d for d in csv.DictReader(open(conversion))]
+
+        expected_keys = ['LGN', 'K5', 'maxschade', 'sr1', 'sr2', 'sr3',
+                         'sr4', 'sr5', 'sr6', 'sr7', 'sr8', 'sr9']
+        for k in expected_keys:
+            if k not in conv_list[0].keys():
+                log.error('could not find key %s in conversion table' % k)
+                sys.exit(2)
+
+        schadefuncties = {}
+        for item in conv_list:
+            schadefuncties[int(item['LGN'])] = item
+        #----------------------------------------------------------------------------------------
+        log.info(" - read hymstat table")
+        csv_list = [d for d in csv.DictReader(open(input_hymstat))]
+        expected_hymstat_keys = ['Location', 'Scale par. beta', 'Location par. x0']
+
+        for k in expected_hymstat_keys:
+            csv_list[0].keys()
+            if k not in csv_list[0].keys():
+                log.error('could not find key %s in hymstat table' % k)
+                sys.exit(2)
+
+        hymstat = {}
+        for item in csv_list:
+            hymstat[item[config.get('risico', 'hymstat_id')]] = item
         #----------------------------------------------------------------------------------------
         # Check geometry input parameters
         log.info("Check geometry of input parameters")
@@ -64,36 +92,36 @@ def main():
         #log.debug(" - check <input >: %s" % argument1)
 
         "<check geometry from input data, append to list if incorrect>"
-        
+
         if len(geometry_check_list) > 0:
             log.error("check input: %s" % geometry_check_list)
             sys.exit(2)
-            
+
         #----------------------------------------------------------------------------------------
         # Check required fields in input data
         log.info("Check required fields in input data")
 
-        missing_fields = [] 
+        missing_fields = []
 
         #<check required fields from input data, append them to list if missing>
         check_fields = {}#check_fields = {input_1: [fieldname1, fieldname2], input_2: [fieldname1, fieldname2]}
-        for input_fc,fieldnames in check_fields.items():
+        for input_fc, fieldnames in check_fields.items():
             for fieldname in fieldnames:
                 if not turtlebase.arcgis.is_fieldname(gp, input_fc, fieldname):
                     errormsg = "fieldname %s not available in %s" % (fieldname, input_fc)
                     log.error(errormsg)
                     missing_fields.append(errormsg)
-        
+
         if len(missing_fields) > 0:
             log.error("missing fields in input data: %s" % missing_fields)
             sys.exit(2)
-            
+
         #----------------------------------------------------------------------------------------
         # Environments
         log.info("Set environments")
         temp_peilgebieden = turtlebase.arcgis.get_random_file_name(workspace_gdb)
         gp.Select_analysis(peilgebied, temp_peilgebieden)
-        
+
         cellsize = gp.describe(input_ahn).MeanCellHeight  # use same cell size as AHN
         gp.extent = gp.describe(temp_peilgebieden).extent  # use extent from Peilgebieden
         gpgident = config.get('GENERAL', 'gpgident')
@@ -101,7 +129,7 @@ def main():
         #----------------------------------------------------------------------------------------
         # create ahn ascii
         log.info("Create ascii from ahn")
-        
+
         ahn_ascii = turtlebase.arcgis.get_random_file_name(workspace, ".asc")
         log.debug("ahn ascii: %s" % ahn_ascii)
         gp.RasterToASCII_conversion(input_ahn, ahn_ascii)
@@ -119,7 +147,7 @@ def main():
                 gridcode = "grid_code"
             else:
                 log.error("Cannot find 'grid_code' or 'gridcode' field in input lgn file")
-                
+
             temp_lgn = turtlebase.arcgis.get_random_file_name(workspace_gdb)
             gp.FeatureToRaster_conversion(input_lgn, gridcode, temp_lgn, cellsize)
         elif lgn_desc.DataType == 'RasterDataset':
@@ -130,7 +158,7 @@ def main():
         else:
             log.error("cannot recognize datatype of LGN, must be a fc, shapefile or a raster dataset")
             sys.exit(5)
-       
+
         lgn_ascii = turtlebase.arcgis.get_random_file_name(workspace, ".asc")
         log.debug("lgn ascii: %s" % lgn_ascii)
         gp.RasterToASCII_conversion(temp_lgn, lgn_ascii)
@@ -163,28 +191,21 @@ def main():
         InField = "ID_INT"
         temp_peilgebieden_raster = turtlebase.arcgis.get_random_file_name(workspace_gdb)
         gp.FeatureToRaster_conversion(temp_peilgebieden, InField, temp_peilgebieden_raster, cellsize)
-                
+
         peilgeb_asc = turtlebase.arcgis.get_random_file_name(workspace, ".asc")
         gp.RasterToASCII_conversion(temp_peilgebieden_raster, peilgeb_asc)
-        
+
         #----------------------------------------------------------------------------------------
         # Read input tables into dictionaries
         log.info("Read input tables")
         log.info(" - read RR_Peilgebied")
         rr_peilgebied = nens.gp.get_table(gp, input_rr_peilgebied, primary_key=gpgident.lower())
         log.info(" - read RR_Maaiveld")
-        rr_maaiveld = nens.gp.get_table(gp, input_rr_maaiveld,primary_key=gpgident.lower())
-        log.info(" - read Conversion table")
-        schadefuncties = nens.gp.get_table(gp, conversion, primary_key='lgn')
+        rr_maaiveld = nens.gp.get_table(gp, input_rr_maaiveld, primary_key=gpgident.lower())
+
         log.info(" - read conversion table between id_int and gpgident")
         gpg_conv = nens.gp.get_table(gp, temp_peilgebieden, primary_key='id_int')
 
-        log.info(" - read hymstat table")
-        csv_dict = [d for d in csv.DictReader(open(input_hymstat))]
-        hymstat = {}
-        for item in csv_dict:
-            hymstat[item[config.get('risico', 'hymstat_id')]] = item
-            
         #----------------------------------------------------------------------------------------
         log.info("Calculate Risk")
         temp_risico = turtlebase.arcgis.get_random_file_name(workspace, "risk.asc")
@@ -200,7 +221,7 @@ def main():
                                                          os.path.basename(input_ahn),
                                                          os.path.basename(input_lgn))
             risk_result[k]['DATE_TIME'] = time.strftime("%d-%m-%Y, %H:%M:%S")
-            
+
         gp.ASCIIToRaster_conversion(temp_risico, output_risico, "FLOAT")
         gp.ASCIIToRaster_conversion(temp_risico_in, output_risico_inundation, "FLOAT")
 
@@ -226,28 +247,28 @@ def main():
                          {'fieldname': 'SOURCE', 'fieldtype': 'text', 'length': 256},
                          {'fieldname': 'DATE_TIME', 'fieldtype': 'text', 'length': 25},
                          {'fieldname': 'COMMENTS', 'fieldtype': 'text', 'length': 256}]
-        
+
         for field_to_add in fields_to_add:
             if field_to_add['fieldname'].lower() not in risk_fields:
                 if 'length' in field_to_add:
                     gp.addfield_management(output_risk_table, field_to_add['fieldname'], field_to_add['fieldtype'], "#", "#", field_to_add['length'])
                 else:
                     gp.addfield_management(output_risk_table, field_to_add['fieldname'], field_to_add['fieldtype'])
-                         
+
         turtlebase.arcgis.write_result_to_output(output_risk_table, gpgident, risk_result)
         #----------------------------------------------------------------------------------------
         # Delete temporary workspace geodatabase & ascii files
         try:
             log.debug("delete temporary workspace: %s" % workspace_gdb)
             gp.delete(workspace_gdb)
-            
+
             log.info("workspace deleted")
         except:
-            log.warning("failed to delete %s" % workspace_gdb)
+            log.debug("failed to delete %s" % workspace_gdb)
 
         tempfiles = os.listdir(workspace)
         for tempfile in tempfiles:
-            if tempfile.endswith('.asc'):
+            if tempfile.endswith('.asc') or tempfile.endswith('.prj') :
                 try:
                     os.remove(os.path.join(workspace, tempfile))
                     log.debug("%s/%s removed" % (workspace, tempfile))
@@ -261,4 +282,4 @@ def main():
     finally:
         logging_config.cleanup()
         del gp
-    
+

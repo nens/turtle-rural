@@ -37,7 +37,7 @@ def main():
         #check fields
         opm_correc_field = 'OPM_CORREC'
         if not turtlebase.arcgis.is_fieldname(gp, input_oppervlak, opm_correc_field):
-            gp.AddField(input_oppervlak, 'TEXT', '#', '#', 50)
+            gp.AddField(input_oppervlak, opm_correc_field, 'TEXT', '#', '#', 50)
 
         gpgident_field = config.get('GENERAL', 'gpgident')
         area_field = config.get('controlerenoppervlakken', 'input_oppervlak_area')

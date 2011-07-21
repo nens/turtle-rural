@@ -24,7 +24,7 @@ def create_point_file_from_polyline(gp, config, file_with_xy_points, output_file
     '''
 
     gp.CreateFeatureClass_management(os.path.dirname(output_file), os.path.basename(output_file), "POINT")
-    col_ovkident = config.get('netwerkanalyse', 'ovkident')
+    col_ovkident = config.get('general', 'ovkident')
     gp.Addfield_management(output_file, "ovkident", "TEXT")
     rows_out = gp.InsertCursor(output_file)
     pnt = gp.CreateObject("Point")
