@@ -11,7 +11,7 @@ from turtlebase.logutils import LoggingConfig
 from turtlebase import mainutils
 import turtlebase.arcgis
 import turtlebase.general
-import turtlebase_graph
+import turtlebase.graph
 import nens.gp
 
 log = logging.getLogger(__name__)
@@ -55,7 +55,7 @@ def main():
 
         if not os.path.isdir(output_graphs):
             os.makedirs(output_graphs)
-        turtlebase_graph.create_cross_section_graph(gp, input_yz, output_graphs)
+        turtlebase.graph.create_cross_section_graph(gp, input_yz, output_graphs)
 
         if not os.path.isdir(output_csv):
             os.makedirs(output_csv)
