@@ -169,7 +169,8 @@ def main():
             geometry_check_list.append(input_lgn_raster + " -> (Integer)")
 
         if gp.describe(input_lgn_raster).MeanCellHeight != float(cellsize):
-            log.error("Cell size of LGN is %s, must be 25" % gp.describe(input_lgn_raster).MeanCellHeight)
+            log.error("Cell size of LGN is %s, must be %s" % (
+                                    gp.describe(input_lgn_raster).MeanCellHeight, cellsize))
             geometry_check_list.append(input_lgn_raster + " -> (Cellsize %s)" % cellsize)
 
         if len(geometry_check_list) > 0:

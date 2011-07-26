@@ -74,5 +74,6 @@ setup(name='turtle-rural',
             'rural_bepalen_landgebruik = turtle_rural.rural_bepalen_landgebruik:main',
             'rural_flip_lines = turtle_rural.rural_flip_lines:main',
             'rural_network_analysis = turtle_rural.rural_network_analysis:main',
+            'rural_import_cf = turtle_rural.rural_import_cf:main',
           ]},
       )
