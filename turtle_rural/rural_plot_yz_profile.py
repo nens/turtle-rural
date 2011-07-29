@@ -51,16 +51,20 @@ def main():
             #sys.exit(1)
 
         output_graphs = os.path.join(output_workspace, "graph")
+        log.info("output graphs: %s" % output_graphs)
         output_csv = os.path.join(output_workspace, "csv")
+        log.info("output csv: %s" % output_csv)
 
         if not os.path.isdir(output_graphs):
             os.makedirs(output_graphs)
+        log.info("Create graphs for cross sections")
         turtlebase.graph.create_cross_section_graph(gp, input_yz, output_graphs)
 
         if not os.path.isdir(output_csv):
             os.makedirs(output_csv)
 
         row = gp.SearchCursor(input_yz)
+        log.info("Create CSV files")
         for item in nens.gp.gp_iterator(row):
 
             if item.GetValue('P_ORDER') == 1:
