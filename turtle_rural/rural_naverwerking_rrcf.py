@@ -98,9 +98,10 @@ def main():
             output_result_table = sys.argv[6]
 
             # optional output
+            temprasters = []
             output_inundation = sys.argv[7]
             if output_inundation == "#":
-                output_inundation = turtlebase.arcgis.get_random_file_name(workspace_gdb)
+                output_inundation = os.path.join(workspace_gdb, "inun_nbw")
 
             if len(os.path.basename(output_inundation)) > 13:
                 log.error("filename raster output (%s) cannot contain more than 13 characters" % os.path.basename(output_inundation))
@@ -108,7 +109,7 @@ def main():
 
             output_waterdamage = sys.argv[8]
             if output_waterdamage == "#":
-                output_waterdamage = turtlebase.arcgis.get_random_file_name(workspace_gdb)
+                output_waterdamage = os.path.join(workspace_gdb, "damage_nbw")
 
             if len(os.path.basename(output_waterdamage)) > 13:
                 log.error("filename raster output (%s) cannot contain more than 13 characters" % os.path.basename(output_waterdamage))
@@ -130,7 +131,7 @@ def main():
             <output_inundation> <output_waterdamage> <output inundation total> <output waterdamage total>")
             sys.exit(1)
         #----------------------------------------------------------------------------------------
-        temp_voronoi = turtlebase.arcgis.get_random_file_name(workspace_gdb)
+        temp_voronoi = os.path.join(workspace_gdb, "voronoi")
         gp.select_analysis(input_voronoi_polygon, temp_voronoi)
 
         # Check geometry input parameters
@@ -250,7 +251,7 @@ def main():
         #---------------------------------------------------------------------
         # Create target level raster
         log.info("Create targetlevel raster")
-        out_raster_targetlevel = turtlebase.arcgis.get_random_file_name(workspace_gdb)
+        out_raster_targetlevel = os.path.join(workspace_gdb, "targetlv")
         gp.FeatureToRaster_conversion(temp_voronoi, field_streefpeil, out_raster_targetlevel, cellsize)
 
         #---------------------------------------------------------------------
@@ -258,22 +259,22 @@ def main():
         log.info("Create freeboard raster")
 
         # create ahn ascii
-        ahn_ascii = turtlebase.arcgis.get_random_file_name(workspace, ".asc")
+        ahn_ascii = os.path.join(workspace, "ahn.asc")
         log.debug("ahn ascii: %s" % ahn_ascii)
         gp.RasterToASCII_conversion(input_ahn_raster, ahn_ascii)
 
-        targetlevel_ascii = turtlebase.arcgis.get_random_file_name(workspace, ".asc")
+        targetlevel_ascii = os.path.join(workspace, "targetlvl.asc")
         log.debug("targetlevel ascii: %s" % targetlevel_ascii)
         gp.RasterToASCII_conversion(out_raster_targetlevel, targetlevel_ascii)
 
-        freeboard_ascii = turtlebase.arcgis.get_random_file_name(workspace, ".asc")
+        freeboard_ascii = os.path.join(workspace, "freeboard.asc")
         turtlebase.spatial.create_freeboard_raster(ahn_ascii, targetlevel_ascii, freeboard_ascii)
 
         #----------------------------------------------------------------------------------------
         # Create K5 LGN
         log.info("Reclass LGN to K5 raster")
-        lgn_ascii = turtlebase.arcgis.get_random_file_name(workspace, ".asc")
-        lgn_k5_ascii = turtlebase.arcgis.get_random_file_name(workspace, ".asc")
+        lgn_ascii = os.path.join(workspace, "lgn.asc")
+        lgn_k5_ascii = os.path.join(workspace, "lgn_k5.asc")
 
         gp.RasterToASCII_conversion(input_lgn_raster, lgn_ascii)
 
@@ -297,13 +298,13 @@ def main():
             log.info(" - create inundation urban")
             waterlevel = "%s/ws_%s" % (workspace_gdb, return_period_urban)
             if gp.exists(waterlevel):
-                inundation_urban = turtlebase.arcgis.get_random_file_name(workspace, ".asc")
+                inundation_urban = os.path.join(workspace, "inun_urban.asc")
                 turtlebase.spatial.create_inundation_raster(lgn_k5_ascii, ahn_ascii, waterlevel, 1,
                                                             return_period_urban, inundation_urban, workspace, use_lgn=True)
                 inundation_raster_list.append(inundation_urban)
                 if output_inundation_total != '#':
                     # Inundation without lgn
-                    inundation_total_urban = turtlebase.arcgis.get_random_file_name(workspace, ".asc")
+                    inundation_total_urban = os.path.join(workspace, "inun_total_urban.asc")
                     turtlebase.spatial.create_inundation_raster(lgn_k5_ascii, ahn_ascii, waterlevel,
                                                                1, return_period_urban, inundation_total_urban, workspace, use_lgn=False)
                     inundation_total_raster_list.append(inundation_total_urban)
@@ -317,13 +318,13 @@ def main():
             waterlevel = "%s/ws_%s" % (workspace_gdb, return_period_agriculture)
             if gp.exists(waterlevel):
                 # Inundation with lgn
-                inundation_agriculture = turtlebase.arcgis.get_random_file_name(workspace, ".asc")
+                inundation_agriculture = os.path.join(workspace, "inun_agri.asc")
                 turtlebase.spatial.create_inundation_raster(lgn_k5_ascii, ahn_ascii, waterlevel,
                                                            2, return_period_agriculture, inundation_agriculture, workspace, use_lgn=True)
                 inundation_raster_list.append(inundation_agriculture)
                 if output_inundation_total != '#':
                     # Inundation without lgn
-                    inundation_total_agriculture = turtlebase.arcgis.get_random_file_name(workspace, ".asc")
+                    inundation_total_agriculture = os.path.join(workspace, "inun_total_agri.asc")
                     turtlebase.spatial.create_inundation_raster(lgn_k5_ascii, ahn_ascii, waterlevel,
                                                                2, return_period_agriculture, inundation_total_agriculture, workspace, use_lgn=False)
                     inundation_total_raster_list.append(inundation_total_agriculture)
@@ -336,13 +337,13 @@ def main():
             log.info(" - create inundation rural")
             waterlevel = "%s/ws_%s" % (workspace_gdb, return_period_rural)
             if gp.exists(waterlevel):
-                inundation_rural = turtlebase.arcgis.get_random_file_name(workspace, ".asc")
+                inundation_rural = os.path.join(workspace, "inun_rural.asc")
                 turtlebase.spatial.create_inundation_raster(lgn_k5_ascii, ahn_ascii, waterlevel,
                                                            3, return_period_rural, inundation_rural, workspace, use_lgn=True)
                 inundation_raster_list.append(inundation_rural)
                 if output_inundation_total != '#':
                     # Inundation without lgn
-                    inundation_total_rural = turtlebase.arcgis.get_random_file_name(workspace, ".asc")
+                    inundation_total_rural = os.path.join(workspace, "inun_total_rural.asc")
                     turtlebase.spatial.create_inundation_raster(lgn_k5_ascii, ahn_ascii, waterlevel,
                                                                3, return_period_rural, inundation_total_rural, workspace, use_lgn=False)
                     inundation_total_raster_list.append(inundation_total_rural)
@@ -356,13 +357,13 @@ def main():
             waterlevel = "%s/ws_%s" % (workspace_gdb, return_period_grass)
             if gp.exists(waterlevel):
                 log.debug("waterlevel grasland = %s" % waterlevel)
-                inundation_grass = turtlebase.arcgis.get_random_file_name(workspace, ".asc")
+                inundation_grass = os.path.join(workspace, "inun_grass.asc")
                 turtlebase.spatial.create_inundation_raster(lgn_k5_ascii, ahn_ascii, waterlevel,
                                                            4, return_period_grass, inundation_grass, workspace, use_lgn=True)
                 inundation_raster_list.append(inundation_grass)
                 if output_inundation_total != '#':
                     # Inundation without lgn
-                    inundation_total_grass = turtlebase.arcgis.get_random_file_name(workspace, ".asc")
+                    inundation_total_grass = os.path.join(workspace, "inun_total_grass.asc")
                     turtlebase.spatial.create_inundation_raster(lgn_k5_ascii, ahn_ascii, waterlevel,
                                                                4, return_period_grass, inundation_total_grass, workspace, use_lgn=False)
                     inundation_total_raster_list.append(inundation_total_grass)
@@ -392,13 +393,13 @@ def main():
             log.info(" - create waterdamage urban")
             waterlevel = "%s/ws_%s" % (workspace_gdb, return_period_urban_damage)
             if gp.exists(waterlevel):
-                damage_urban = turtlebase.arcgis.get_random_file_name(workspace, ".asc")
+                damage_urban = os.path.join(workspace, "damage_urban.asc")
                 turtlebase.spatial.create_inundation_raster(lgn_k5_ascii, freeboard_ascii, waterlevel,
                                                            1, return_period_urban_damage, damage_urban, workspace, use_lgn=True)
                 damage_raster_list.append(damage_urban)
                 if output_waterdamage_total != '#':
                     # Waterdamage without lgn
-                    damage_total_urban = turtlebase.arcgis.get_random_file_name(workspace, ".asc")
+                    damage_total_urban = os.path.join(workspace, "damage_total_urban.asc")
                     turtlebase.spatial.create_inundation_raster(lgn_k5_ascii, ahn_ascii, waterlevel,
                                                                1, return_period_urban_damage, damage_total_urban, workspace, use_lgn=False)
                     damage_total_raster_list.append(damage_total_urban)
@@ -417,7 +418,7 @@ def main():
                 damage_raster_list.append(damage_agriculture)
                 if output_waterdamage_total != '#':
                     # Waterdamage without lgn
-                    damage_total_agriculture = turtlebase.arcgis.get_random_file_name(workspace, ".asc")
+                    damage_total_agriculture = os.path.join(workspace, "damage_total_agri.asc")
                     turtlebase.spatial.create_inundation_raster(lgn_k5_ascii, ahn_ascii, waterlevel,
                                                                1, return_period_agriculture_damage, damage_total_agriculture, workspace, use_lgn=False)
                     damage_total_raster_list.append(damage_total_agriculture)
@@ -436,7 +437,7 @@ def main():
                 damage_raster_list.append(damage_rural)
                 if output_waterdamage_total != '#':
                     # Waterdamage without lgn
-                    damage_total_rural = turtlebase.arcgis.get_random_file_name(workspace, ".asc")
+                    damage_total_rural = os.path.join(workspace_gdb, "damage_total_rural.asc")
                     turtlebase.spatial.create_inundation_raster(lgn_k5_ascii, ahn_ascii, waterlevel,
                                                                1, return_period_rural_damage, damage_total_rural, workspace, use_lgn=False)
                     damage_total_raster_list.append(damage_total_rural)
@@ -449,13 +450,13 @@ def main():
             log.info(" - create waterdamage grass")
             waterlevel = "%s/ws_%s" % (workspace_gdb, return_period_grass_damage)
             if gp.exists(waterlevel):
-                damage_grass = turtlebase.arcgis.get_random_file_name(workspace, ".asc")
+                damage_grass = os.path.join(workspace_gdb, "damage_grass.asc")
                 turtlebase.spatial.create_inundation_raster(lgn_k5_ascii, freeboard_ascii, waterlevel,
                                                            4, return_period_grass_damage, damage_grass, workspace, use_lgn=True)
                 damage_raster_list.append(damage_grass)
                 if output_waterdamage_total != '#':
                     # Waterdamage without lgn
-                    damage_total_grass = turtlebase.arcgis.get_random_file_name(workspace, ".asc")
+                    damage_total_grass = os.path.join(workspace_gdb, "damage_total_grass.asc")
                     turtlebase.spatial.create_inundation_raster(lgn_k5_ascii, ahn_ascii, waterlevel,
                                                                1, return_period_grass_damage, damage_total_grass, workspace, use_lgn=False)
                     damage_total_raster_list.append(damage_total_grass)
@@ -484,7 +485,7 @@ def main():
         # dissolve voronoi based on gpgident
 
         log.debug("dissolve voronoi polygons, based on gpgident")
-        temp_fc_gpgident = turtlebase.arcgis.get_random_file_name(workspace_gdb)
+        temp_fc_gpgident = os.path.join(workspace_gdb, "temp_fc_gpgident")
         gp.Dissolve_management(temp_voronoi, temp_fc_gpgident, gpgident_field)
 
         # Calculate area total, gpgident
@@ -496,17 +497,17 @@ def main():
         log.debug("gpgident_dict: %s" % gpgident_dict)
 
         # create feature class from lgn k5 ascii
-        output_reclass_lgn = turtlebase.arcgis.get_random_file_name(workspace_gdb)
+        output_reclass_lgn = os.path.join(workspace_gdb, "reclass_lgn")
         gp.ASCIIToRaster_conversion(lgn_k5_ascii, output_reclass_lgn)
-        temp_fc_lgn = turtlebase.arcgis.get_random_file_name(workspace_gdb)
+        temp_fc_lgn = os.path.join(workspace_gdb, "fc_lgn")
         gp.RasterToPolygon_conversion(output_reclass_lgn, temp_fc_lgn, "NO_SIMPLIFY")
 
         # union lgn with gpg-areas
-        temp_fc_union_lgn = turtlebase.arcgis.get_random_file_name(workspace_gdb)
+        temp_fc_union_lgn = os.path.join(workspace_gdb, "fc_union_lgn")
         gp.Union_analysis(temp_fc_gpgident + ";" + temp_fc_lgn, temp_fc_union_lgn)
         dissolve_lyr = turtlebase.arcgis.get_random_layer_name()
         gp.MakeFeatureLayer_management(temp_fc_union_lgn, dissolve_lyr, "%s <> ''" % gpgident_field)
-        temp_fc_dissolve_lgn = turtlebase.arcgis.get_random_file_name(workspace_gdb)
+        temp_fc_dissolve_lgn = os.path.join(workspace_gdb, "dissolve_lgn")
         if turtlebase.arcgis.is_fieldname(gp, dissolve_lyr, "GRIDCODE"):
             gp.Dissolve_management(dissolve_lyr, temp_fc_dissolve_lgn, "%s; GRIDCODE" % gpgident_field)
             gridcode = "gridcode"
@@ -529,9 +530,10 @@ def main():
         # Create feature class from inundation_grid
         """ values: 10, 25, 50, 100"""
         if output_inundation_exists == 0:
-            temp_fc_inundation = turtlebase.arcgis.get_random_file_name(workspace_gdb)
+            temp_fc_inundation = os.path.join(workspace_gdb, "inundation")
+            log.info(output_inundation)
             gp.RasterToPolygon_conversion(output_inundation, temp_fc_inundation, "NO_SIMPLIFY")
-            temp_fc_union_inundation = turtlebase.arcgis.get_random_file_name(workspace_gdb)
+            temp_fc_union_inundation = os.path.join(workspace_gdb, "union_inun")
             gp.Union_analysis(temp_fc_dissolve_lgn + ";" + temp_fc_inundation, temp_fc_union_inundation)
             dissolve_inundation_lyr = turtlebase.arcgis.get_random_layer_name()
             if turtlebase.arcgis.is_fieldname(gp, temp_fc_union_inundation, "GRIDCODE_1"):
@@ -547,7 +549,7 @@ def main():
                 log.error("No field available named gridcode_1 or grid_code1")
                 log.warning(nens.gp.get_table_def(gp, temp_fc_union_inundation))
                 sys.exit(1)
-            temp_fc_dissolve_inundation = turtlebase.arcgis.get_random_file_name(workspace_gdb)
+            temp_fc_dissolve_inundation = os.path.join(workspace_gdb, "dissolve_inun")
             dissolve_string = "%s;%s;%s" % (gpgident_field.upper(), gridcode, gridcode_1)
             log.debug(" - dissolve layer: %s" % dissolve_inundation_lyr)
             gp.Dissolve_management(dissolve_inundation_lyr, temp_fc_dissolve_inundation, dissolve_string)
@@ -567,7 +569,7 @@ def main():
         """ values: 10, 15, 25"""
         if output_waterdamage_exists == 0:
             try:
-                temp_fc_waterdamage = turtlebase.arcgis.get_random_file_name(workspace_gdb)
+                temp_fc_waterdamage = os.path.join(workspace_gdb, "damage")
                 gp.RasterToPolygon_conversion(output_waterdamage, temp_fc_waterdamage, "NO_SIMPLIFY")
                 waterdamage = True
             except:
@@ -575,13 +577,13 @@ def main():
                 waterdamage = False
 
             if waterdamage:
-                temp_fc_union_waterdamage = turtlebase.arcgis.get_random_file_name(workspace_gdb)
+                temp_fc_union_waterdamage = os.path.join(workspace_gdb, "damage_union")
                 gp.Union_analysis(temp_fc_dissolve_lgn + ";" + temp_fc_waterdamage, temp_fc_union_waterdamage)
 
                 dissolve_waterdamage_lyr = turtlebase.arcgis.get_random_layer_name()
                 gp.MakeFeatureLayer_management(temp_fc_union_waterdamage, dissolve_waterdamage_lyr, "%s > 0" % gridcode_1)
 
-                temp_fc_dissolve_waterdamage = turtlebase.arcgis.get_random_file_name(workspace_gdb)
+                temp_fc_dissolve_waterdamage = os.path.join(workspace_gdb, "dissolve_damage")
                 gp.Dissolve_management(dissolve_waterdamage_lyr, temp_fc_dissolve_waterdamage, "%s; %s; %s" % (gpgident_field, gridcode, gridcode_1))
 
                 # Calculate area waterdamage
@@ -732,7 +734,7 @@ def main():
         # Create output table
         if not gp.exists(output_result_table):
             log.info("Create new output table")
-            temp_result_table = turtlebase.arcgis.get_random_file_name(workspace_gdb)
+            temp_result_table = os.path.join(workspace_gdb, "result_table")
             gp.CreateTable_management(os.path.dirname(temp_result_table), os.path.basename(temp_result_table))
             copy_table = True
         else:
@@ -806,7 +808,7 @@ def main():
                     os.remove(os.path.join(workspace, tempfile))
                 except Exception, e:
                     log.debug(e)
-
+                    
         mainutils.log_footer()
     except:
         log.error(traceback.format_exc())
