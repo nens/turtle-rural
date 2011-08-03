@@ -11,7 +11,7 @@ py25: MAKE_PYTHONDIR=Python25
 py25: clean create-setup
 
 py26: MAKE_PYTHONVERSION=2.6
-py26: MAKE_PYTHONDIR=Python26\\ArcGIS10.0
+py26: MAKE_PYTHONDIR=Python26
 py26: clean create-setup
 
 clean:
@@ -19,6 +19,8 @@ clean:
 	- rm -rf ../downloads/*.*
 	- rm -rf ../eggs/*.*
 	- rm -rf ../bin/*.*
+	mkdir ../downloads
+	mkdir ../downloads/dist
 
 create-setup:
 	cp turtle-rural.nsi autogen-turtle-rural.nsi
