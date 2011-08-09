@@ -43,8 +43,8 @@ Function .onInit
   ; of Windows registry keys
 
   StrCpy $APPNAME       "Turtle-rural"
-  StrCpy $PYTHONVERSION "2.6"
-  StrCpy $PYTHONDIR     "C:\Python26\ArcGIS10.0"
+  StrCpy $PYTHONVERSION "2.5"
+  StrCpy $PYTHONDIR     "C:\Python25"
 
   ; Extract InstallOptions files
   ; $PLUGINSDIR will automatically be removed when the installer closes
@@ -258,7 +258,7 @@ Section "Turtle-rural (required)"
   ; Unfortunately we have to install the following egg using its precies
   ; directory name. This makes the command rather fragile but NSIS does not
   ; allow wildcards in directories.
-  File /r "..\eggs\zc.buildout-1.4.4-py2.6.egg"
+  File /r "..\eggs\zc.buildout-1.4.4-py2.5.egg"
 
   ; We install the eggs that buildout would usually download. Remember, we
   ; cannot assume we have Internet access during installation.
