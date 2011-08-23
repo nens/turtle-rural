@@ -15,13 +15,19 @@ py26: MAKE_PYTHONDIR=Python26
 py26: clean create-setup
 
 clean:
-	- rm -rf ../downloads/dist/*.*
-	- rm -rf ../downloads/*.*
-	- rm -rf ../eggs/*.*
-	- rm -rf ../bin/*.*
+	- rm -rf ../downloads
+	- rm -rf ../eggs
+	- rm -rf ../bin
 	mkdir ../downloads
 	mkdir ../downloads/dist
+	mkdir ../eggs
+	mkdir ../bin
 
+checkout-tag-and-create-setup:
+	- rm -rf tmp
+	svn export https://office.nelen-schuurmans.nl/svn/Products/Turtle/turtle-rural/tags/$(TAGGED_VERSION) tmp
+	cd tmp/wininst; make py26 TAGGED_VERSION=$(TAGGED_VERSION)
+	
 create-setup:
 	cp turtle-rural.nsi autogen-turtle-rural.nsi
 	# If setuptools is installed as a site package, which is
@@ -47,4 +53,3 @@ create-setup:
 	cd ..; bin/buildout buildout:download-cache=downloads buildout:include-site-packages=false
 	$(MAKENSIS) autogen-turtle-rural.nsi
 	mv turtle-rural-setup.exe turtle-rural-setup-python$(MAKE_PYTHONVERSION).exe
-
