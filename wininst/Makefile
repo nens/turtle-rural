@@ -23,10 +23,10 @@ clean:
 	mkdir ../eggs
 	mkdir ../bin
 
-checkout-tag-and-create-setup:
-	- rm -rf tmp
-	svn export https://office.nelen-schuurmans.nl/svn/Products/Turtle/turtle-rural/tags/$(TAGGED_VERSION) tmp
-	cd tmp/wininst; make py26 TAGGED_VERSION=$(TAGGED_VERSION)
+export-tag-and-create-setup:
+	#- rm -rf $(TEMP)/turtle-rural-export
+	#svn export https://office.nelen-schuurmans.nl/svn/Products/Turtle/turtle-rural/tags/$(TAGGED_VERSION) $(TEMP)/turtle-rural-export	
+	cd $(TEMP)/turtle-rural-export/wininst; make py26 TAGGED_VERSION=$(TAGGED_VERSION)
 	
 create-setup:
 	cp turtle-rural.nsi autogen-turtle-rural.nsi
