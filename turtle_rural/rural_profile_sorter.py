@@ -106,36 +106,39 @@ def sort_pointcloud(gp, centerpoints_d, lineparts, pointcloud):
     profiles_yz = []
     for centerpoint_id, attributes in centerpoints_d.items():
         log.info(" - cross section: %s" % centerpoint_id)
-        ls = lineparts[attributes['ovkident']]
-        if 'target_lvl' in attributes:
-            targetlevel = attributes['target_lvl']
-        else:
-            targetlevel = -999
-        if 'water_lvl' in attributes:
-            waterlevel = attributes['water_lvl']
-        else:
-            waterlevel = -999
-        log.debug("ls: %s" % ls)
-        pc = pointcloud[centerpoint_id]
+        if 'ovkident' in [attributes]:
+            ls = lineparts[attributes['ovkident']]
+            if 'target_lvl' in attributes:
+                targetlevel = attributes['target_lvl']
+            else:
+                targetlevel = -999
+            if 'water_lvl' in attributes:
+                waterlevel = attributes['water_lvl']
+            else:
+                waterlevel = -999
+            log.debug("ls: %s" % ls)
+            pc = pointcloud[centerpoint_id]
 
-        try:
-            sorted = nens.geom.sort_perpendicular_to_segment(ls, pc)
-        except:
-            log.warning("No intersection found, profile %s skipped",
-                        centerpoint_id)
+            try:
+                sorted = nens.geom.sort_perpendicular_to_segment(ls, pc)
+            except:
+                log.warning("No intersection found, profile %s skipped",
+                            centerpoint_id)
+                continue
+            profiles_xyz[centerpoint_id] = sorted
+            log.debug("sorted: %s" % sorted)
+            abscissas = zip(nens.geom.abscissa_from_midsegment(sorted), sorted)
+            log.debug("abscissas %s" % abscissas)
+
+            for index, x in enumerate(abscissas):
+                profiles_yz.append({"proident": centerpoint_id,
+                                    "dist_mid": x[0], "bed_lvl": x[1][2],
+                                    "p_order": index + 1,
+                                    "target_lvl": targetlevel,
+                                    "water_lvl": waterlevel,
+                                    })
+        else:
             continue
-        profiles_xyz[centerpoint_id] = sorted
-        log.debug("sorted: %s" % sorted)
-        abscissas = zip(nens.geom.abscissa_from_midsegment(sorted), sorted)
-        log.debug("abscissas %s" % abscissas)
-
-        for index, x in enumerate(abscissas):
-            profiles_yz.append({"proident": centerpoint_id,
-                                "dist_mid": x[0], "bed_lvl": x[1][2],
-                                "p_order": index + 1,
-                                "target_lvl": targetlevel,
-                                "water_lvl": waterlevel,
-                                })
 
     return profiles_xyz, profiles_yz
 

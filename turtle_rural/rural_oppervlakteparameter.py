@@ -25,28 +25,31 @@ def conv_ha(conversion, lgn_id, ha):
     ha: input for output value
     output: dictionary with 6 keys
     '''
-    if conversion.has_key(lgn_id):
+    if lgn_id in conversion:
         verhard = ha * float(conversion[lgn_id]['verhard_ha'])
         onvsted = ha * float(conversion[lgn_id]['onvsted_ha'])
         kassen = ha * float(conversion[lgn_id]['kassen_ha'])
-        onvland = ha * float(conversion[lgn_id]['onvland_ha'])
+        gras = ha * float(conversion[lgn_id]['gras_ha'])
+        natuur = ha * float(conversion[lgn_id]['natuur_ha'])
         openwat = ha * float(conversion[lgn_id]['openwat_ha'])
         hectares = ha
         error = False
     else:
-        log.warning("lgncode " + str(lgn_id) + " not found! Check conversiontable")
+        log.warning("lgncode %s not found! Check conversiontable" % lgn_id)
         verhard = 0
         onvsted = 0
         kassen = 0
-        onvland = 0
+        gras = 0
+        natuur = 0
         openwat = 0
         hectares = 0
         error = True
-    return {'VERHRD_LGN': verhard,
-            'ONVSTD_LGN': onvsted,
+    return {'VERHARD_LGN': verhard,
+            'ONVSTED_LGN': onvsted,
             'KASSEN_LGN': kassen,
-            'ONVLND_LGN': onvland,
-            'OPENWT_LGN': openwat,
+            'GRAS_LGN': gras,
+            'NATUUR_LGN': natuur,
+            'OPENWAT_LGN': openwat,
             'HECTARES': hectares}, error
 
 
@@ -139,7 +142,7 @@ def main():
             missing_fields.append("%s: %s" % (input_peilgebieden_feature, gpgident))
 
         lgn_id = config.get('OppervlakteParameters', 'input_field_lgncode')
-        conversion_fields = [lgn_id, "verhard_ha", "onvsted_ha", "kassen_ha", "onvland_ha", "openwat_ha"]
+        conversion_fields = [lgn_id, "verhard_ha", "onvsted_ha", "kassen_ha", "gras_ha", "natuur_ha", "openwat_ha"]
         for conversion_field in conversion_fields:
             if not turtlebase.arcgis.is_fieldname(gp, input_conversiontable_dbf, conversion_field):
                 log.debug(" - missing: %s in %s" % (conversion_field, input_conversiontable_dbf))
@@ -201,8 +204,8 @@ def main():
                 if error and not(unknown_lgn_codes.has_key(value_lgn_id)):
                     log.warning(" - Warning: lgncode " + str(value_lgn_id) + " not known (check conversiontable)")
                     unknown_lgn_codes[value_lgn_id] = 1
-            output_with_area[value_gpgident]['LGN_Bron'] = source_str
-            output_with_area[value_gpgident]['LGN_Dtm'] = date_str
+            output_with_area[value_gpgident]['LGN_SOURCE'] = source_str
+            output_with_area[value_gpgident]['LGN_DATE'] = date_str
             calc_count = calc_count + 1
             if calc_count % 100 == 0:
                 log.info("Calculating field nr " + str(calc_count))
@@ -236,8 +239,8 @@ def main():
             for peilgebied_id, values in output_with_area.items():
                 if watershape_areas.has_key(peilgebied_id):
                     output_with_area[peilgebied_id]['OPNWT_GBKN'] = watershape_areas[peilgebied_id]['area']
-                    output_with_area[peilgebied_id]['GBKN_Dtm'] = date_str
-                    output_with_area[peilgebied_id]['GBKN_Bron'] = source_watershape
+                    output_with_area[peilgebied_id]['GBKN_DATE'] = date_str
+                    output_with_area[peilgebied_id]['GBKN_SOURCE'] = source_watershape
 
         #----------------------------------------------------------------------------------------
         # 4) put dictionary area into output_table (HydroBase)
@@ -246,17 +249,18 @@ def main():
         #definition of fields
         areaFields = {}
         areaFields = {gpgident: {'type': 'TEXT', 'length': '30'},
-                      'VERHRD_LGN':{'type': 'DOUBLE'},
-                      'ONVSTD_LGN':{'type': 'DOUBLE'},
+                      'VERHARD_LGN':{'type': 'DOUBLE'},
+                      'ONVSTED_LGN':{'type': 'DOUBLE'},
                       'KASSEN_LGN':{'type': 'DOUBLE'},
-                      'ONVLND_LGN':{'type': 'DOUBLE'},
-                      'OPENWT_LGN':{'type': 'DOUBLE'},
+                      'GRAS_LGN':{'type': 'DOUBLE'},
+                      'NATUUR_LGN':{'type': 'DOUBLE'},
+                      'OPENWAT_LGN':{'type': 'DOUBLE'},
                       'HECTARES':{'type': 'DOUBLE'},
                       'OPNWT_GBKN':{'type': 'DOUBLE'},
-                      'LGN_src':{'type': 'TEXT', 'length': '50'},
-                      'LGN_Dtm':{'type': 'TEXT', 'length': '50'},
-                      'GBKN_Dtm':{'type': 'TEXT', 'length': '50'},
-                      'GBKN_Bron':{'type': 'TEXT', 'length': '50'}}
+                      'LGN_SOURCE':{'type': 'TEXT', 'length': '50'},
+                      'LGN_DATE':{'type': 'TEXT', 'length': '50'},
+                      'GBKN_DATE':{'type': 'TEXT', 'length': '50'},
+                      'GBKN_SOURCE':{'type': 'TEXT', 'length': '50'}}
 
         #check if output_table exists. if not, create with correct rows
         log.info("Checking table...")

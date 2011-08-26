@@ -50,7 +50,7 @@ def kwelwegzijging(wat_is_het, waarde):
     if wat_is_het == settings.get('dictionary.peilgebied.kwel_wegzijging', 'kwel'):
         return abs(waarde)
     elif wat_is_het == settings.get('dictionary.peilgebied.kwel_wegzijging', 'wegzijging'):
-        return - abs(waarde)
+        return -abs(waarde)
     return waarde
 
 
@@ -327,7 +327,7 @@ import nens.gp
 required_fields = {
     'peilgebied': ['id', 'ycoord', 'xcoord', 'total_area',
                    'verhard_area', 'OnverhardSted_area', 'kas_area',
-                   'OnverhardLand_area', 'openwater_area', 'paved_runoff_coefficient', ],
+                   'grass_area', 'nature_area', 'openwater_area', 'paved_runoff_coefficient', ],
     'kunstwerk': ['id', ],
     }
 
@@ -565,7 +565,7 @@ class Onverhard(SobekNode):
     def write(self, pool):
         "writes the object to the correct files in the pool"
         self.__super.write(pool)
-        pool['unp3b'].write("UNPV id '%(id)s' na 16 ar %(area)i 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 ga %(groundw_area)i lv %(level).2f co %(ground_comp_type)i su %(use_scurve)i '%(scurve_def)s' sd '%(storage_def)s' %(storage_comp)s '%(alfa_def)s' sp '%(seepage_def)s' ic '%(infilt_cap_def)s' bt %(soil_type)i ig 0 %(ini_groundwater)s mg %(level).2f gl %(groundlayer).2f ms '%(meteo_station)s' is %(isc).2f unpv\n" % self)
+        pool['unp3b'].write("UNPV id '%(id)s' na 16 ar %(area_grass)i 0 0 0 0 %(area_misc)i 0 0 0 0 0 0 0 0 0 %(area_nature)i ga %(groundw_area)i lv %(level).2f co %(ground_comp_type)i su %(use_scurve)i '%(scurve_def)s' sd '%(storage_def)s' %(storage_comp)s '%(alfa_def)s' sp '%(seepage_def)s' ic '%(infilt_cap_def)s' bt %(soil_type)i ig 0 %(ini_groundwater)s mg %(level).2f gl %(groundlayer).2f ms '%(meteo_station)s' is %(isc).2f unpv\n" % self)
         pool['unptbl'].write("SC_T id '%(scurve_def)s' nm '%(id)s' PDIN 1 0 pdin TBLE\n%(scurve_table)s tble sc_t\n" % self)
         pool['unpsto'].write("STDF id '%(storage_def)s' nm '%(id)s' ml %(land_storage).1f il %(initial_land_storage).1f stdf\n" % self)
         pool['unpsep'].write("SEEP id '%(seepage_def)s' nm '%(id)s' co 1 sp %(kwel).2f ss %(kwel_salt_concentration).2f cv %(kwel_resist_C).1f seep\n" % self)
@@ -618,8 +618,13 @@ class OnverhardLand(Onverhard):
         self.__super.__init__(peilgebied, **kwargs)
         self['ycoord'] += 25
         self.update({
-                'area': int(float(peilgebied['onverhardland_area']) * 10000),
-                'groundw_area': int(peilgebied['onverhardLand_area'] * 10000),
+                'area_grass': int(float(peilgebied['grass_area']) * 10000),
+                'area_nature': int(float(peilgebied['nature_area']) * 10000),
+                'area_misc': 0,
+                'area': int((float(peilgebied['grass_area']) * 10000) +
+                            int(float(peilgebied['nature_area']) * 10000)),
+                'groundw_area': (int(float(peilgebied['nature_area']) * 10000) +
+                                  int(float(peilgebied['grass_area']) * 10000)),
                 'use_scurve': settings.getfloat('globals', 'use_scurve'),
                 'land_storage': peilgebied['maxBergingLand'],
                 'initial_land_storage': peilgebied['bergingLandIni'],
@@ -639,9 +644,14 @@ class OnverhardSted(Onverhard):
         self.__super.__init__(peilgebied, **kwargs)
         self['ycoord'] -= 25
         self.update({
+                'area_grass': 0,
+                'area_nature': 0,
+                'area_misc': int(peilgebied['onverhardsted_area'] * 10000),
                 'area': int(peilgebied['onverhardsted_area'] * 10000),
-                'groundw_area': int(peilgebied['shape_area'] - # also compensate paved
-                                    (peilgebied['openwater_area'] + peilgebied['OnverhardLand_area']) * 10000),
+                'groundw_area': int(peilgebied['shape_area'] -
+                                    (peilgebied['openwater_area'] +
+                                     (int(float(peilgebied['nature_area']) * 10000) +
+                                      int(float(peilgebied['grass_area']) * 10000)))),
                 'use_scurve': False,
                 'land_storage': peilgebied['maxBergingSted'],
                 'initial_land_storage': peilgebied['bergingStedIni'],
@@ -1265,7 +1275,7 @@ def main(options, args):
             log.debug("first peilgebied has %d fields after the join" % len(peilgebieden[0]))
             log.debug("columns are: %s" % str(peilgebieden[0].keys()))
 
-        # transform to list of case-insensitive dictionaries
+                # transform to list of case-insensitive dictionaries
         peilgebieden = [Peilgebied(init=k) for k in peilgebieden]
         peilgebieden_dict = dict([(p['id'], p) for p in peilgebieden])
 
@@ -1278,8 +1288,10 @@ def main(options, args):
                                               {'openwater_area': 0.0,
                                                'verhard_area': 0.0,
                                                'onverhardsted_area': 0.0,
-                                               'kas_area': 0.0,
                                                'onverhardland_area': 0.0,
+                                               'kas_area': 0.0,
+                                               'grass_area': 0.0,
+                                               'nature_area': 0.0,
                                                })
 
         for peilgebied in peilgebieden:
@@ -1382,8 +1394,12 @@ def main(options, args):
             # koppelpunt or openwater, depending on whether koppelpunt
             # exists or not.
             log.debug("area of %s for %s is %s" % (type_name, peilgebied['id'], peilgebied[type_name + '_area']))
-            if (float(peilgebied[type_name + '_area']) >=
-                settings.getfloat('threshold.peilgebied', type_name + '_area')):
+            if type_name == 'onverhardland':
+                input_area = float(peilgebied['grass_area']) + float(peilgebied['nature_area'])
+            else:
+                input_area = float(peilgebied[type_name + '_area'])
+
+            if (input_area >= settings.getfloat('threshold.peilgebied', type_name + '_area')):
 
                 # koppelpunt_name is None if model is RR or if, in
                 # RR+RR_CF model with cfDirect, no "knoop" has been
