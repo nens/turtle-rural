@@ -112,7 +112,13 @@ def main(options, args):
         lijn.setAttribute("gml:id", "%s" % uuid.uuid4())
         feature_member.appendChild(lijn)
 
-        ## the line has curve properties
+        ## the line has:
+        ## * an identifier
+        fme_ident = doc.createElement("fme:ident")
+        fme_ident.appendChild(doc.createTextNode("SBK_CHANNEL:" + edge_id))
+        lijn.appendChild(fme_ident)
+
+        ## * curve properties
         curve_property = doc.createElement("gml:curveProperty")
         lijn.appendChild(curve_property)
 
@@ -148,7 +154,13 @@ def main(options, args):
         punt.setAttribute("gml:id", "%s" % uuid.uuid4())
         feature_member.appendChild(punt)
         
-        ## the point has point properties
+        ## the point has:
+        ## * an identifier
+        fme_ident = doc.createElement("fme:ident")
+        fme_ident.appendChild(doc.createTextNode(type + ":" + id))
+        punt.appendChild(fme_ident)
+
+        ## *  point properties
         point_property = doc.createElement("gml:pointProperty")
         punt.appendChild(point_property)
 
