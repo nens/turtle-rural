@@ -35,6 +35,19 @@ import nens.sobek
 from xml.dom.minidom import Document
 import uuid
 
+
+class sequence_functor:
+    def __call__(self):
+        self.count += 1
+        return self.count
+
+    def __init__(self):
+        self.count = 0
+
+
+sequence = sequence_functor()
+
+
 def main(options, args):
     """the function being called by the arcgis script.
 
@@ -102,6 +115,7 @@ def main(options, args):
         (from_type, from_id), (to_type, to_id) = o.dict['SBK_CHANNEL'][edge_id]
         (from_x, from_y) = o.dict[from_type][from_id]
         (to_x, to_y) = o.dict[to_type][to_id]
+        obj_id = sequence()
 
         ## anything we add is a featureMember
         feature_member = doc.createElement("gml:featureMember")
@@ -113,12 +127,22 @@ def main(options, args):
         feature_member.appendChild(lijn)
 
         ## the line has:
-        ## * an identifier
+        ## * fme:ident
         fme_ident = doc.createElement("fme:ident")
         fme_ident.appendChild(doc.createTextNode("SBK_CHANNEL:" + edge_id))
         lijn.appendChild(fme_ident)
 
-        ## * curve properties
+        ## * fme:fid
+        fme_ident = doc.createElement("fme:fid")
+        fme_ident.appendChild(doc.createTextNode(str(obj_id)))
+        lijn.appendChild(fme_ident)
+
+        ## * fme:objectid
+        fme_ident = doc.createElement("fme:objectid")
+        fme_ident.appendChild(doc.createTextNode(str(obj_id)))
+        lijn.appendChild(fme_ident)
+
+        ## * gml:curveProperties
         curve_property = doc.createElement("gml:curveProperty")
         lijn.appendChild(curve_property)
 
@@ -144,6 +168,7 @@ def main(options, args):
 
     for type, id in points:
         (x, y) = o.dict[type][id]
+        obj_id = sequence()
 
         ## again, anything we add is a featureMember
         feature_member = doc.createElement("gml:featureMember")
@@ -155,9 +180,19 @@ def main(options, args):
         feature_member.appendChild(punt)
         
         ## the point has:
-        ## * an identifier
+        ## * fme:ident
         fme_ident = doc.createElement("fme:ident")
         fme_ident.appendChild(doc.createTextNode(type + ":" + id))
+        punt.appendChild(fme_ident)
+
+        ## * fme:fid
+        fme_ident = doc.createElement("fme:fid")
+        fme_ident.appendChild(doc.createTextNode(str(obj_id)))
+        punt.appendChild(fme_ident)
+
+        ## * fme:objectid
+        fme_ident = doc.createElement("fme:objectid")
+        fme_ident.appendChild(doc.createTextNode(str(obj_id)))
         punt.appendChild(fme_ident)
 
         ## *  point properties
@@ -179,7 +214,42 @@ def main(options, args):
         pos.appendChild(ptext)
 
     output = file(output_file_name + ".gml", "w")
-    output.write(doc.toprettyxml(indent="  "))
+    output.write(doc.toprettyxml(indent=" "))
+    output.close()
+
+    output = file(output_file_name + ".xsd", "w")
+    output.write('''\
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified" targetNamespace="http://www.safe.com/gml/fme" xmlns:fme="http://www.safe.com/gml/fme" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:gml="http://www.opengis.net/gml">
+  <xs:import namespace="http://www.opengis.net/gml" schemaLocation="gml.xsd"/>
+  <xs:import namespace="http://www.w3.org/2001/XMLSchema-instance" schemaLocation="xsi.xsd"/>
+  <xs:element name="lijn">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="fme:ident"/>
+        <xs:element ref="fme:fid"/>
+        <xs:element ref="fme:objectid"/>
+        <xs:element ref="gml:curveProperty"/>
+      </xs:sequence>
+      <xs:attribute ref="gml:id" use="required"/>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="punt">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="fme:ident"/>
+        <xs:element ref="fme:fid"/>
+        <xs:element ref="fme:objectid"/>
+        <xs:element ref="gml:pointProperty"/>
+      </xs:sequence>
+      <xs:attribute ref="gml:id" use="required"/>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="ident" type="xs:NMTOKEN"/>
+  <xs:element name="fid" type="xs:integer"/>
+  <xs:element name="objectid" type="xs:integer"/>
+</xs:schema>
+''')
     output.close()
 
 if __name__ == "__main__":
