@@ -29,9 +29,12 @@
 #* initial date       :  2011-09-06
 #**********************************************************************
 
+
 __revision__ = "$Rev$"[6:-2]
 
+
 import nens.sobek
+import nens.turtleurbanclasses as tuc
 from xml.dom.minidom import Document
 import uuid
 
@@ -48,6 +51,71 @@ class sequence_functor:
 sequence = sequence_functor()
 
 
+def select_from(sobek_list, field_name, field_value):
+    """which element in sobek_list has field_name equal to field_value?
+    """
+    candidates = [i for i in sobek_list if i[field_name] == field_value]
+    if len(candidates) != 1:
+        return None
+    return candidates[0]
+
+
+def sobek_to_tuc(sobek_input, type, id):
+    """create one tuc object from sobek input
+    """
+    result = None
+    structure = sobek_input['STRUCT.DAT']['STRU', id]
+    structure_def = sobek_input['STRUCT.DEF']['STDS', structure['dd'][0])
+    if structure_def is not None:
+        friction_dat = select_from(sobek_input['FRICTION.DAT']['STFR'], 'ci', structure_def['id'])
+    control_def = sobek_input['CONTROL.DEF']['CNTL', structure['cj'][0])
+    if type == "SBK_CHANNEL":
+        pass
+    elif type == 'SBK_WEIR':
+        result = tuc.Overstort_Knoop()
+    elif type == 'SBK_CULVERT':
+        pass
+    elif type == 'SBK_PUMP':
+        result = tuc.Gemaal_Knoop()
+    elif type == 'SBK_BRIDGE':
+        pass
+    else:
+        log.warn("unhandled case '%s'" % type)
+    return result
+
+    
+def sobek_network_to_objects(sobek_network_ntw):
+    """read the sobek files and convert them to tuc objects.
+    tuc or nens.turtleurbanclasses.
+    """
+    global sobek_input
+    global sobek_network
+    sobek_input = {}
+    sobek_input['NETWORK.NTW'] = nens.sobek.Network(sobek_network_ntw)
+    other_sobek_files = ['INITIAL.DAT', 'LATERAL.DAT', 'STRUCT.DAT', 
+                         'CONTROL.DEF', 'FRICTION.DAT', 'PROFILE.DEF', 
+                         'STRUCT.DEF', 'PROFILE.DAT', 'BOUNDARY.DAT']
+    path_to_files = os.path.split(sobek_network_ntw)[0]
+    sobek_input.update(dict([(i, nens.sobek.File(path_to_files + '/' + i)) 
+                             for i in other_sobek_files
+                             if i != "NETWORK.NTW"]))
+    ## the result is a collection of tuc objects, indexed by type and id.
+    tuc_collection = dict()
+    ## main entry point is the channels network, but the network also
+    ## defines nodes and most of these objects correspond to tuc
+    ## objects that must be exported.
+    sobek_network = sobek_input['NETWORK.NTW'].dict
+    ## scan the network for objects (edge, node_from, node_to).
+    for edge_id in sobek_network['SBK_CHANNEL']:
+        (from_type, from_id), (to_type, to_id) = sobek_network['SBK_CHANNEL'][edge_id]
+        tuc_collection[from_type, from_id] = sobek_to_tuc(sobek_input, 'SBK_CHANNEL', edge_id)
+        if (from_type, from_id) not in tuc_collection:
+            tuc_collection[from_type, from_id] = sobek_to_tuc(sobek_input, from_type, from_id)
+        if (to_type, to_id) not in tuc_collection:
+            tuc_collection[to_type, to_id] = sobek_to_tuc(sobek_input, to_type, to_id)
+    return tuc_collection
+
+
 def main(options, args):
     """the function being called by the arcgis script.
 
@@ -57,20 +125,6 @@ def main(options, args):
 
     ## unpack arguments
     input_file_name, output_file_name = args
-
-    ## Create the minidom document
-    doc = Document()
-    ## Create the base element
-    feature_collection = doc.createElement("gml:FeatureCollection")
-    ## put it in the document
-    doc.appendChild(feature_collection)
-
-    ## set its references to the schema definition
-    feature_collection.setAttribute("xmlns:gml", "http://www.opengis.net/gml")
-    feature_collection.setAttribute("xmlns:xlink", "http://www.w3.org/1999/xlink")
-    feature_collection.setAttribute("xmlns:xsi", "http://www.w3.org/2001/XMLSchema-instance")
-    feature_collection.setAttribute("xmlns:fme", "http://www.safe.com/gml/fme")
-    feature_collection.setAttribute("xsi:schemaLocation", "http://www.safe.com/gml/fme %s.xsd" % output_file_name)
 
     ## the set of points used.  each element is a 2-tuple (type, id)
     points = set()
@@ -92,23 +146,6 @@ def main(options, args):
         min_y = min(min_y, float(y))
         max_x = max(max_x, float(x))
         max_y = max(max_y, float(y))
-
-    ## add the bounding box
-    bounded_by = doc.createElement("gml:boundedBy")
-    feature_collection.appendChild(bounded_by)
-
-    envelope = doc.createElement("gml:Envelope")
-    envelope.setAttribute("srsName", "EPSG:28992")
-    envelope.setAttribute("srsDimensions", "2")
-    bounded_by.appendChild(envelope)
-
-    corner = doc.createElement("gml:lowerCorner")
-    corner.appendChild(doc.createTextNode("%0.6f %0.6f" % (float(min_x), float(min_y))))
-    envelope.appendChild(corner)
-
-    corner = doc.createElement("gml:upperCorner")
-    corner.appendChild(doc.createTextNode("%0.6f %0.6f" % (float(max_x), float(max_y))))
-    envelope.appendChild(corner)
 
     ## now add the features
     for edge_id in o.dict['SBK_CHANNEL']:
