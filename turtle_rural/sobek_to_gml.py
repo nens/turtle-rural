@@ -67,12 +67,19 @@ def sobek_to_tuc(sobek_input, type, id):
     structure = sobek_input['STRUCT.DAT']['STRU', id]
     structure_def = sobek_input['STRUCT.DEF']['STDS', structure['dd'][0])
     if structure_def is not None:
-        friction_dat = select_from(sobek_input['FRICTION.DAT']['STFR'], 'ci', structure_def['id'])
+        friction = select_from(sobek_input['FRICTION.DAT']['STFR'], 'ci', structure_def['id'])
     control_def = sobek_input['CONTROL.DEF']['CNTL', structure['cj'][0])
+    profile_def = sobek_input['CONTROL.DEF']['CRDS', structure_def['si'][0])
+    profile = select_from(sobek_input['PROFILE.DAT']['CRSN'], 'di', profile_def['id'])
     if type == "SBK_CHANNEL":
         pass
     elif type == 'SBK_WEIR':
         result = tuc.Overstort_Knoop()
+        result.constant_crest_height = structure_def['cl'][0]
+        result.constant_crest_width = structure_def['cw'][0]
+        result.discharge_coefficient = structure_def['ce'][0]
+        result.contraction = structure_def['sw'][0]
+        result.flow_direction = structure_def['rt'][0]
     elif type == 'SBK_CULVERT':
         pass
     elif type == 'SBK_PUMP':
@@ -80,6 +87,8 @@ def sobek_to_tuc(sobek_input, type, id):
     elif type == 'SBK_BRIDGE':
         pass
     else:
+        log.info("unknown case '%s'" % type)
+    if result is None:
         log.warn("unhandled case '%s'" % type)
     return result
 
