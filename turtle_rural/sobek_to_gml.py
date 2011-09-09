@@ -80,7 +80,22 @@ def sobek_to_tuc(sobek_input, type, id):
         result.discharge_coefficient = structure_def['ce'][0]
         result.contraction = structure_def['sw'][0]
         result.flow_direction = structure_def['rt'][0]
+    elif type == 'SBK_UNIWEIR':
+        result = tuc.Overstort_Knoop()
+        result.discharge_coefficient = structure_def['ce'][0]
+        result.contraction = structure_def['sw'][0]
+        result.flow_direction = structure_def['rt'][0]
+        result.ground_layer_depth = profile_def['gl'][0]
     elif type == 'SBK_CULVERT':
+        result.bed_level_left = structure_def['ll'][0]
+        result.bed_level_right = structure_def['rl'][0]
+        result.inlet_loss = structure_def['li'][0]
+        result.outlet_loss = structure_def['lo'][0]
+        result.bend_loss = structure_def['lb'][0]
+        result.initial_opening = structure_def['ov'][0]
+        result.length = structure_def['dl'][0]
+        result.friction_type = friction['sf'][0]
+        result.friction_value = friction['st cp'][0]
         pass
     elif type == 'SBK_PUMP':
         result = tuc.Gemaal_Knoop()
