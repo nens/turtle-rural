@@ -649,7 +649,7 @@ class OnverhardSted(Onverhard):
                 'area_misc': int(peilgebied['onverhardsted_area'] * 10000),
                 'area': int(peilgebied['onverhardsted_area'] * 10000),
                 'groundw_area': int(peilgebied['shape_area'] -
-                                    (peilgebied['openwater_area'] +
+                                    (int(float(peilgebied['openwater_area']) * 10000) +
                                      (int(float(peilgebied['nature_area']) * 10000) +
                                       int(float(peilgebied['grass_area']) * 10000)))),
                 'use_scurve': False,
