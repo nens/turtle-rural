@@ -106,7 +106,7 @@ def sort_pointcloud(gp, centerpoints_d, lineparts, pointcloud):
     profiles_yz = []
     for centerpoint_id, attributes in centerpoints_d.items():
         log.info(" - cross section: %s" % centerpoint_id)
-        if 'ovkident' in [attributes]:
+        if 'ovkident' in attributes:
             ls = lineparts[attributes['ovkident']]
             if 'target_lvl' in attributes:
                 targetlevel = attributes['target_lvl']
@@ -131,6 +131,7 @@ def sort_pointcloud(gp, centerpoints_d, lineparts, pointcloud):
             log.debug("abscissas %s" % abscissas)
 
             for index, x in enumerate(abscissas):
+                log.info(index + 1)
                 profiles_yz.append({"proident": centerpoint_id,
                                     "dist_mid": x[0], "bed_lvl": x[1][2],
                                     "p_order": index + 1,
@@ -320,6 +321,7 @@ def main():
             log.warning("failed to delete %s" % workspace_gdb)
 
         mainutils.log_footer()
+
     except:
         log.error(traceback.format_exc())
         sys.exit(1)
