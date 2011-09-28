@@ -34,9 +34,10 @@ __revision__ = "$Rev$"[6:-2]
 
 
 import nens.sobek
-import nens.turtleurbanclasses as tuc
+import nens.turtleruralclasses as trc
 from xml.dom.minidom import Document
 import uuid
+import os
 
 
 class sequence_functor:
@@ -60,91 +61,6 @@ def select_from(sobek_list, field_name, field_value):
     return candidates[0]
 
 
-def sobek_to_tuc(sobek_input, type, id):
-    """create one tuc object from sobek input
-    """
-    result = None
-    structure = sobek_input['STRUCT.DAT']['STRU', id]
-    structure_def = sobek_input['STRUCT.DEF']['STDS', structure['dd'][0])
-    if structure_def is not None:
-        friction = select_from(sobek_input['FRICTION.DAT']['STFR'], 'ci', structure_def['id'])
-    control_def = sobek_input['CONTROL.DEF']['CNTL', structure['cj'][0])
-    profile_def = sobek_input['CONTROL.DEF']['CRDS', structure_def['si'][0])
-    profile = select_from(sobek_input['PROFILE.DAT']['CRSN'], 'di', profile_def['id'])
-    if type == "SBK_CHANNEL":
-        pass
-    elif type == 'SBK_WEIR':
-        result = tuc.Overstort_Knoop()
-        result.name = structure['name'][0]
-        result.constant_crest_height = structure_def['cl'][0]
-        result.constant_crest_width = structure_def['cw'][0]
-        result.discharge_coefficient = structure_def['ce'][0]
-        result.contraction = structure_def['sw'][0]
-        result.flow_direction = structure_def['rt'][0]
-    elif type == 'SBK_UNIWEIR':
-        result = tuc.Overstort_Knoop()
-        result.name = structure['name'][0]
-        result.discharge_coefficient = structure_def['ce'][0]
-        result.contraction = structure_def['sw'][0]
-        result.flow_direction = structure_def['rt'][0]
-        result.ground_layer_depth = profile_def['gl'][0]
-    elif type == 'SBK_CULVERT':
-        result = tuc.Overstort_Knoop()
-        result.name = structure['name'][0]
-        result.bed_level_left = structure_def['ll'][0]
-        result.bed_level_right = structure_def['rl'][0]
-        result.inlet_loss = structure_def['li'][0]
-        result.outlet_loss = structure_def['lo'][0]
-        result.bend_loss = structure_def['lb'][0]
-        result.initial_opening = structure_def['ov'][0]
-        result.length = structure_def['dl'][0]
-        result.friction_type = friction['sf'][0]
-        result.friction_value = friction['st cp'][0]
-        pass
-    elif type == 'SBK_PUMP':
-        result = tuc.Gemaal_Knoop()
-        result.name = structure['name'][0]
-    elif type == 'SBK_BRIDGE':
-        pass
-    else:
-        log.info("unknown case '%s'" % type)
-    if result is None:
-        log.warn("unhandled case '%s'" % type)
-    return result
-
-    
-def sobek_network_to_objects(sobek_network_ntw):
-    """read the sobek files and convert them to tuc objects.
-    tuc or nens.turtleurbanclasses.
-    """
-    global sobek_input
-    global sobek_network
-    sobek_input = {}
-    sobek_input['NETWORK.NTW'] = nens.sobek.Network(sobek_network_ntw)
-    other_sobek_files = ['INITIAL.DAT', 'LATERAL.DAT', 'STRUCT.DAT', 
-                         'CONTROL.DEF', 'FRICTION.DAT', 'PROFILE.DEF', 
-                         'STRUCT.DEF', 'PROFILE.DAT', 'BOUNDARY.DAT']
-    path_to_files = os.path.split(sobek_network_ntw)[0]
-    sobek_input.update(dict([(i, nens.sobek.File(path_to_files + '/' + i)) 
-                             for i in other_sobek_files
-                             if i != "NETWORK.NTW"]))
-    ## the result is a collection of tuc objects, indexed by type and id.
-    tuc_collection = dict()
-    ## main entry point is the channels network, but the network also
-    ## defines nodes and most of these objects correspond to tuc
-    ## objects that must be exported.
-    sobek_network = sobek_input['NETWORK.NTW'].dict
-    ## scan the network for objects (edge, node_from, node_to).
-    for edge_id in sobek_network['SBK_CHANNEL']:
-        (from_type, from_id), (to_type, to_id) = sobek_network['SBK_CHANNEL'][edge_id]
-        tuc_collection[from_type, from_id] = sobek_to_tuc(sobek_input, 'SBK_CHANNEL', edge_id)
-        if (from_type, from_id) not in tuc_collection:
-            tuc_collection[from_type, from_id] = sobek_to_tuc(sobek_input, from_type, from_id)
-        if (to_type, to_id) not in tuc_collection:
-            tuc_collection[to_type, to_id] = sobek_to_tuc(sobek_input, to_type, to_id)
-    return tuc_collection
-
-
 def main(options, args):
     """the function being called by the arcgis script.
 
@@ -155,168 +71,21 @@ def main(options, args):
     ## unpack arguments
     input_file_name, output_file_name = args
 
-    ## the set of points used.  each element is a 2-tuple (type, id)
-    points = set()
+    trc_collection = trc.from_sobek_network(input_file_name)
 
-    o = nens.sobek.Network(input_file_name)
+    document = trc.create_gml_document()
+    [i.add_as_element_to(document) for i in trc_collection.values()]
+    out = file(output_file_name + ".xml", "w")
+    document.ownerDocument.writexml(out)
+    out.close()
 
-    ## first scan the content to compute the bounding box.
-    min_x = min_y = float("inf")
-    max_x = max_y = -float("inf")
-    for edge_id in o.dict['SBK_CHANNEL']:
-        (from_type, from_id), (to_type, to_id) = o.dict['SBK_CHANNEL'][edge_id]
-        (x, y) = o.dict[from_type][from_id]
-        min_x = min(min_x, float(x))
-        min_y = min(min_y, float(y))
-        max_x = max(max_x, float(x))
-        max_y = max(max_y, float(y))
-        (x, y) = o.dict[to_type][to_id]
-        min_x = min(min_x, float(x))
-        min_y = min(min_y, float(y))
-        max_x = max(max_x, float(x))
-        max_y = max(max_y, float(y))
-
-    ## now add the features
-    for edge_id in o.dict['SBK_CHANNEL']:
-        (from_type, from_id), (to_type, to_id) = o.dict['SBK_CHANNEL'][edge_id]
-        (from_x, from_y) = o.dict[from_type][from_id]
-        (to_x, to_y) = o.dict[to_type][to_id]
-        obj_id = sequence()
-
-        ## anything we add is a featureMember
-        feature_member = doc.createElement("gml:featureMember")
-        feature_collection.appendChild(feature_member)
-
-        ## first feature member is the line
-        lijn = doc.createElement("fme:lijn")
-        lijn.setAttribute("gml:id", "%s" % uuid.uuid4())
-        feature_member.appendChild(lijn)
-
-        ## the line has:
-        ## * fme:ident
-        fme_ident = doc.createElement("fme:ident")
-        fme_ident.appendChild(doc.createTextNode("SBK_CHANNEL:" + edge_id))
-        lijn.appendChild(fme_ident)
-
-        ## * fme:fid
-        fme_ident = doc.createElement("fme:fid")
-        fme_ident.appendChild(doc.createTextNode(str(obj_id)))
-        lijn.appendChild(fme_ident)
-
-        ## * fme:objectid
-        fme_ident = doc.createElement("fme:objectid")
-        fme_ident.appendChild(doc.createTextNode(str(obj_id)))
-        lijn.appendChild(fme_ident)
-
-        ## * gml:curveProperties
-        curve_property = doc.createElement("gml:curveProperty")
-        lijn.appendChild(curve_property)
-
-        ## the single curve property contains a lineString which
-        ## contains a posList which is just the two coordinates of the
-        ## two points (four numbers).
-        line_string = doc.createElement("gml:LineString")
-        line_string.setAttribute("srsName", "EPSG:28992")
-        line_string.setAttribute("srsDimensions", "2")
-        curve_property.appendChild(line_string)
-
-        pos_list = doc.createElement("gml:posList")
-        line_string.appendChild(pos_list)
-
-        ## coordinates are as text in gml:posList
-        ptext = doc.createTextNode("%0.6f %0.6f %0.6f %0.6f" % (float(from_x), float(from_y), float(to_x), float(to_y)))
-        pos_list.appendChild(ptext)
-
-        ## add pointers to the points to be used.  `points` is a set
-        ## and this takes care of removing duplicates.
-        points.add((from_type, from_id))
-        points.add((to_type, to_id))
-
-    for type, id in points:
-        (x, y) = o.dict[type][id]
-        obj_id = sequence()
-
-        ## again, anything we add is a featureMember
-        feature_member = doc.createElement("gml:featureMember")
-        feature_collection.appendChild(feature_member)
-
-        ## now adding points
-        punt = doc.createElement("fme:punt")
-        punt.setAttribute("gml:id", "%s" % uuid.uuid4())
-        feature_member.appendChild(punt)
-        
-        ## the point has:
-        ## * fme:ident
-        fme_ident = doc.createElement("fme:ident")
-        fme_ident.appendChild(doc.createTextNode(type + ":" + id))
-        punt.appendChild(fme_ident)
-
-        ## * fme:fid
-        fme_ident = doc.createElement("fme:fid")
-        fme_ident.appendChild(doc.createTextNode(str(obj_id)))
-        punt.appendChild(fme_ident)
-
-        ## * fme:objectid
-        fme_ident = doc.createElement("fme:objectid")
-        fme_ident.appendChild(doc.createTextNode(str(obj_id)))
-        punt.appendChild(fme_ident)
-
-        ## *  point properties
-        point_property = doc.createElement("gml:pointProperty")
-        punt.appendChild(point_property)
-
-        ## the single point property contains a point which contains a
-        ## pos which is just the two coordinates of the point.
-        point = doc.createElement("gml:Point")
-        point.setAttribute("srsName", "EPSG:28992")
-        point.setAttribute("srsDimensions", "2")
-        point_property.appendChild(point)
-
-        pos = doc.createElement("gml:pos")
-        point.appendChild(pos)
-
-        ## coordinates are as text in gml:pos
-        ptext = doc.createTextNode("%0.6f %0.6f" % (float(x), float(y)))
-        pos.appendChild(ptext)
-
-    output = file(output_file_name + ".gml", "w")
-    output.write(doc.toprettyxml(indent=" "))
-    output.close()
-
-    output = file(output_file_name + ".xsd", "w")
-    output.write('''\
-<?xml version="1.0" encoding="UTF-8"?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified" targetNamespace="http://www.safe.com/gml/fme" xmlns:fme="http://www.safe.com/gml/fme" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:gml="http://www.opengis.net/gml">
-  <xs:import namespace="http://www.opengis.net/gml" schemaLocation="gml.xsd"/>
-  <xs:import namespace="http://www.w3.org/2001/XMLSchema-instance" schemaLocation="xsi.xsd"/>
-  <xs:element name="lijn">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element ref="fme:ident"/>
-        <xs:element ref="fme:fid"/>
-        <xs:element ref="fme:objectid"/>
-        <xs:element ref="gml:curveProperty"/>
-      </xs:sequence>
-      <xs:attribute ref="gml:id" use="required"/>
-    </xs:complexType>
-  </xs:element>
-  <xs:element name="punt">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element ref="fme:ident"/>
-        <xs:element ref="fme:fid"/>
-        <xs:element ref="fme:objectid"/>
-        <xs:element ref="gml:pointProperty"/>
-      </xs:sequence>
-      <xs:attribute ref="gml:id" use="required"/>
-    </xs:complexType>
-  </xs:element>
-  <xs:element name="ident" type="xs:NMTOKEN"/>
-  <xs:element name="fid" type="xs:integer"/>
-  <xs:element name="objectid" type="xs:integer"/>
-</xs:schema>
-''')
-    output.close()
+    trc_used_classes = set(i.__class__ for i in trc_collection.values())
+    schema = trc.create_xsd_document()
+    [i.add_definition_to(schema) for i in trc_used_classes]
+    out = file(output_file_name + ".xsd", "w")
+    #schema.ownerDocument.writexml(out)
+    out.write(schema.ownerDocument.toprettyxml(indent="  "))
+    out.close()
 
 if __name__ == "__main__":
     import sys
