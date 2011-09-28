@@ -33,32 +33,7 @@
 __revision__ = "$Rev$"[6:-2]
 
 
-import nens.sobek
 import nens.turtleruralclasses as trc
-from xml.dom.minidom import Document
-import uuid
-import os
-
-
-class sequence_functor:
-    def __call__(self):
-        self.count += 1
-        return self.count
-
-    def __init__(self):
-        self.count = 0
-
-
-sequence = sequence_functor()
-
-
-def select_from(sobek_list, field_name, field_value):
-    """which element in sobek_list has field_name equal to field_value?
-    """
-    candidates = [i for i in sobek_list if i[field_name] == field_value]
-    if len(candidates) != 1:
-        return None
-    return candidates[0]
 
 
 def main(options, args):
