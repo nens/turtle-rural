@@ -35,6 +35,7 @@ __revision__ = "$Rev$"[6:-2]
 
 import nens.gp
 import nens.turtleruralclasses as trc
+import os.path
 
 
 def main(options=None, args=None):
@@ -45,15 +46,18 @@ def main(options=None, args=None):
     """
 
     if options is args is None:
-        options, args = nens.gp.parse_arguments({1: ('arg', 0),
-                                                 2: ('arg', 1)})
+        options, args = nens.gp.parse_arguments({1: ('arg', 0),  # input network.ntw
+                                                 2: ('arg', 1),  # output path + name - extension
+                                                 3: ('arg', 2),  # config file
+                                                 })
 
     ## unpack arguments
-    input_file_name, output_file_name = args
+    input_file_name, output_file_name, config_file_name = args
 
     trc_collection = trc.from_sobek_network(input_file_name)
+    output_basedir, output_basename = os.path.split(output_file_name)
 
-    document = trc.create_gml_document()
+    document = trc.create_gml_document(output_basename)
     [i.add_as_element_to(document) for i in trc_collection.values()]
     out = file(output_file_name + ".xml", "w")
     document.ownerDocument.writexml(out)
