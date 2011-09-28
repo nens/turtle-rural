@@ -33,15 +33,20 @@
 __revision__ = "$Rev$"[6:-2]
 
 
+import nens.gp
 import nens.turtleruralclasses as trc
 
 
-def main(options, args):
+def main(options=None, args=None):
     """the function being called by the arcgis script.
 
     in this form so it is easy to invoke the same functionality from
     the command line.
     """
+
+    if options is args is None:
+        options, args = nens.gp.parse_arguments({1: ('arg', 0),
+                                                 2: ('arg', 1)})
 
     ## unpack arguments
     input_file_name, output_file_name = args
@@ -62,6 +67,6 @@ def main(options, args):
     out.write(schema.ownerDocument.toprettyxml(indent="  "))
     out.close()
 
+
 if __name__ == "__main__":
-    import sys
-    main(None, sys.argv[1:])
+    main()
