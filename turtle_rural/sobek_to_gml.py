@@ -54,6 +54,8 @@ def main(options=None, args=None):
     ## unpack arguments
     input_file_name, output_file_name, config_file_name = args
 
+    trc.Base.register_configuration(config_file_name)
+
     trc_collection = trc.from_sobek_network(input_file_name)
     output_basedir, output_basename = os.path.split(output_file_name)
 
