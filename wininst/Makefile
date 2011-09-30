@@ -8,11 +8,11 @@ py24: clean create-setup
 
 py25: MAKE_PYTHONVERSION=2.5
 py25: MAKE_PYTHONDIR=Python25
-py25: clean create-setup
+py25: create-setup-from-export
 
 py26: MAKE_PYTHONVERSION=2.6
 py26: MAKE_PYTHONDIR=Python26
-py26: clean create-setup
+py26: create-setup-from-export
 
 clean:
 	- rm -rf ../downloads
@@ -23,12 +23,14 @@ clean:
 	mkdir ../eggs
 	mkdir ../bin
 
-export-tag-and-create-setup:
-	#- rm -rf $(TEMP)/turtle-rural-export
-	#svn export https://office.nelen-schuurmans.nl/svn/Products/Turtle/turtle-rural/tags/$(TAGGED_VERSION) $(TEMP)/turtle-rural-export	
-	cd $(TEMP)/turtle-rural-export/wininst; make py26 TAGGED_VERSION=$(TAGGED_VERSION)
+export-tag:
+	- rm -rf $(TEMP)/turtle-rural-export
+	svn export https://office.nelen-schuurmans.nl/svn/Products/Turtle/turtle-rural/tags/$(TAGGED_VERSION) $(TEMP)/turtle-rural-export
 	
-create-setup:
+create-setup-from-export: export-tag
+	cd $(TEMP)/turtle-rural-export/wininst; make clean create-setup
+	
+create-setup: clean
 	cp turtle-rural.nsi autogen-turtle-rural.nsi
 	# If setuptools is installed as a site package, which is
 	# required by zest.releaser, the execution of buildout in this
