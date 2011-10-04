@@ -45,6 +45,8 @@ def main(options=None, args=None):
     the command line.
     """
 
+    reload(trc)
+
     if options is args is None:
         options, args = nens.gp.parse_arguments({1: ('arg', 0),  # input network.ntw
                                                  2: ('arg', 1),  # output path + name - extension
@@ -56,6 +58,7 @@ def main(options=None, args=None):
 
     trc.Base.register_configuration(config_file_name)
 
+    global trc_collection
     trc_collection = trc.from_sobek_network(input_file_name)
     output_basedir, output_basename = os.path.split(output_file_name)
 
@@ -66,6 +69,9 @@ def main(options=None, args=None):
     out.close()
 
     trc_used_classes = set(i.__class__ for i in trc_collection.values())
+    if trc.Profile in trc_used_classes:
+        trc_used_classes.add(trc.CrossSectionYZ)
+        trc_used_classes.add(trc.CrossSectionLW)
     schema = trc.create_xsd_document()
     [i.add_definition_to(schema) for i in trc_used_classes]
     out = file(output_file_name + ".xsd", "w")
