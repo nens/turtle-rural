@@ -45,8 +45,6 @@ def main(options=None, args=None):
     the command line.
     """
 
-    reload(trc)
-
     if options is args is None:
         options, args = nens.gp.parse_arguments({1: ('arg', 0),  # input network.ntw
                                                  2: ('arg', 1),  # output path + name - extension
@@ -58,7 +56,6 @@ def main(options=None, args=None):
 
     trc.Base.register_configuration(config_file_name)
 
-    global trc_collection
     trc_collection = trc.from_sobek_network(input_file_name)
     output_basedir, output_basename = os.path.split(output_file_name)
 
