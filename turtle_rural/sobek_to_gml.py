@@ -66,6 +66,8 @@ def main(options=None, args=None):
     out.close()
 
     trc_used_classes = set(i.__class__ for i in trc_collection.values())
+    if trc.Pump in trc_used_classes:
+        trc_used_classes.add(trc.PumpStages)
     if trc.Profile in trc_used_classes:
         trc_used_classes.add(trc.CrossSectionYZ)
         trc_used_classes.add(trc.CrossSectionLW)
