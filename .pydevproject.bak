@@ -1,7 +1,0 @@
-<?xml version="1.0" ?><?eclipse-pydev version="1.0"?><pydev_project>
-<pydev_property name="org.python.pydev.PYTHON_PROJECT_INTERPRETER">Default</pydev_property>
-<pydev_property name="org.python.pydev.PYTHON_PROJECT_VERSION">python 2.6</pydev_property>
-<pydev_pathproperty name="org.python.pydev.PROJECT_SOURCE_PATH">
-<path>/Turtle-rural/src</path>
-</pydev_pathproperty>
-<pydev_pathproperty name="org.python.pydev.PROJECT_EXTERNAL_SOURCE_PATH"><path>c:\python_ontwikkeling\turtle-rural</path><path>c:\python_ontwikkeling\turtle-rural\eggs\turtlebase-11.6-py2.6.egg</path><path>c:\python_ontwikkeling\turtle-rural\eggs\setuptools-0.6c11-py2.6.egg</path><path>c:\python_ontwikkeling\turtle-rural\eggs\pkginfo-0.8-py2.6.egg</path><path>c:\python_ontwikkeling\turtle-rural\eggs\nens-1.6-py2.6.egg</path><path>c:\python26\arcgis10.0\lib\site-packages</path><path>c:\python_ontwikkeling\turtle-rural\eggs\shapely-1.2.8-py2.6-win32.egg</path><path>c:\python_ontwikkeling\turtle-rural\eggs\mock-0.7.0-py2.6.egg</path><path>c:\python_ontwikkeling\turtle-rural\eggs\dbfpy-2.2.5-py2.6.egg</path><path>c:\python_ontwikkeling\turtle-rural\eggs\networkx-1.2-py2.6.egg</path><path>c:\python_ontwikkeling\turtle-rural\eggs\pil-1.1.7-py2.6-win32.egg</path></pydev_pathproperty></pydev_project>
