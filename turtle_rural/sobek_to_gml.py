@@ -61,7 +61,7 @@ def main(options=None, args=None):
 
     document = trc.create_gml_document(output_basename)
     [i.add_as_element_to(document) for i in trc_collection.values()]
-    out = file(output_file_name + ".xml", "w")
+    out = file(output_file_name + ".gml", "w")
     document.ownerDocument.writexml(out)
     out.close()
 
