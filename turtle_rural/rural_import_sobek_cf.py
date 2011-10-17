@@ -67,7 +67,7 @@ def main():
         import sobek_to_gml
         sys.argv[1] = os.path.join(sys.argv[1], 'network.ntw')
         sys.argv[2] = turtlebase.arcgis.get_random_file_name(workspace)
-        xml_file = sys.argv[2] + ".xml"
+        xml_file = sys.argv[2] + ".gml"
         options, args = nens.gp.parse_arguments({1: ('arg', 0), # input network.ntw
                                                  2: ('arg', 1), # output path + name - extension
                                                  3: ('arg', 2), # config file
