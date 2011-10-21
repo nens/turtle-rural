@@ -76,6 +76,7 @@ def main():
 
         import arcpy
         arcpy.CheckOutExtension("DataInteroperability")
+        log.info("DataInteroperability extension checked out") 
         arcpy.QuickImport_interop(xml_file, output_gdb)
 
         #---------------------------------------------------------------------
@@ -98,4 +99,5 @@ def main():
 
     finally:
         logging_config.cleanup()
+        arcpy.CheckInExtension("DataInteroperability")
         del gp
