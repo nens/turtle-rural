@@ -648,10 +648,9 @@ class OnverhardSted(Onverhard):
                 'area_nature': 0,
                 'area_misc': int(peilgebied['onverhardsted_area'] * 10000),
                 'area': int(peilgebied['onverhardsted_area'] * 10000),
-                'groundw_area': int(peilgebied['shape_area'] -
-                                    (int(float(peilgebied['openwater_area']) * 10000) +
-                                     (int(float(peilgebied['nature_area']) * 10000) +
-                                      int(float(peilgebied['grass_area']) * 10000)))),
+                'groundw_area': (int(float(peilgebied['onverhardsted_area']) * 10000) +
+                                 int(float(peilgebied['kas_area']) * 10000) +
+                                 int(float(peilgebied['verhard_area']) * 10000)),
                 'use_scurve': False,
                 'land_storage': peilgebied['maxBergingSted'],
                 'initial_land_storage': peilgebied['bergingStedIni'],
