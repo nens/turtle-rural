@@ -1,4 +1,4 @@
-; example2.nsi
+\; example2.nsi
 ;
 ; This script is based on example1.nsi, but it remember the directory,
 ; has uninstall support and (optionally) installs start menu shortcuts.
@@ -26,7 +26,7 @@ OutFile "turtle-rural-setup.exe"
 
 ; Set default installation directory. Ideally we would like to use the $APPNAME
 ; variable but InstallDir does not seem to support that.
-InstallDir $PROGRAMFILES\Turtle-rural
+InstallDir $PROGRAMFILES\Nelen & Schuurmans\Turtle-rural
 
 ; Registry key to check for directory (so if you install again, it will
 ; overwrite the old one automatically)
@@ -126,10 +126,10 @@ FunctionEnd
 
 Function ConflictingPackagesPage
 
-  Var /GLOBAL PACKAGES 
+  Var /GLOBAL PACKAGES
 
   StrCpy $PACKAGES ""
- 
+
   ExecWait "$PYTHONDIR\pythonw.exe $PLUGINSDIR\check_nens.py"
   IfErrors +1 +2
   StrCpy $PACKAGES "- nens\n"
@@ -142,7 +142,7 @@ Function ConflictingPackagesPage
   Return
 
   show:
-    WriteINIStr "$PLUGINSDIR\conflicting-packages.ini" "Field 2" "Text" $PACKAGES	
+    WriteINIStr "$PLUGINSDIR\conflicting-packages.ini" "Field 2" "Text" $PACKAGES
     InstallOptions::initDialog "$PLUGINSDIR\conflicting-packages.ini"
     InstallOptions::show
 
