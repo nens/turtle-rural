@@ -75,5 +75,6 @@ setup(name='turtle-rural',
             'rural_flip_lines = turtle_rural.rural_flip_lines:main',
             'rural_network_analysis = turtle_rural.rural_network_analysis:main',
             'rural_import_sobek_cf = turtle_rural.rural_import_sobek_cf:main',
+            'rural_culvertprofiles = turtle_rural.rural_culvertprofiles:main',
           ]},
       )
