@@ -104,19 +104,21 @@ def main():
             sys.exit(2)
         #---------------------------------------------------------------------
         # Environments
-        gegevens = nens.gp.get_table(gp, peilgebieden_fc, primary_key=gpgident)
-        nens.gp.join_on_primary_key(gp, gegevens, rr_peilgebied, gpgident)
-        nens.gp.join_on_primary_key(gp, gegevens, rr_grondsoort, gpgident)
-        nens.gp.join_on_primary_key(gp, gegevens, rr_kwelwegzijging, gpgident)
-        nens.gp.join_on_primary_key(gp, gegevens, rr_oppervlak, gpgident)
+        peilgebieden = nens.gp.get_table(gp, peilgebieden_fc, primary_key=gpgident)
+        nens.gp.join_on_primary_key(gp, peilgebieden, rr_peilgebied, gpgident)
+        nens.gp.join_on_primary_key(gp, peilgebieden, rr_grondsoort, gpgident)
+        nens.gp.join_on_primary_key(gp, peilgebieden, rr_kwelwegzijging, gpgident)
+        nens.gp.join_on_primary_key(gp, peilgebieden, rr_oppervlak, gpgident)
 
         polders = {}
-        for k, v in gegevens.items():
+        for k, v in peilgebieden.items():
             if v[gafident] in polders:
                 polders[gafident]["peilgebieden"].append(k)
             else:
                 polders[gafident] = {"peilgebieden": [k]}
 
+        log.info(polders)
+        log.info(peilgebieden)
         #---------------------------------------------------------------------
         # Delete temporary workspace geodatabase & ascii files
         try:

@@ -129,7 +129,6 @@ def main(options=None, args=None):
     if not os.path.isdir(output_graphs):
         os.makedirs(output_graphs)
 
-
     for row in table:
         svg_info = {}
         for field in config.options('column.culvert'):
@@ -159,7 +158,7 @@ def main(options=None, args=None):
         out.close()
 
     location_svg = output_graphs + "\\*.svg"
-    os.system('C:\\Users\\coen.nengerman\\Downloads\\batik-1.7\\convert_svg_to_png.bat %s' % location_svg)
+    os.system('..\\batik\\convert_svg_to_png.bat %s' % location_svg)
 
     # Create CSV files
     output_csv = os.path.join(output_dir, "csv")
@@ -172,15 +171,15 @@ def main(options=None, args=None):
     for item in nens.gp.gp_iterator(row):
         #log.info(" - export csv for: %s" % item.GetValue('kwk_name'))
 
-        output_file = os.path.join(output_csv, "%s.csv" % item.GetValue('kwk_name'))
-        turtlebase.general.add_to_csv(output_file, [('Location:    ', item.GetValue('kwk_name'))], "wb")
-        turtlebase.general.add_to_csv(output_file, [('Vorm:        ', item.GetValue('type'))], "ab")
-        turtlebase.general.add_to_csv(output_file, [('Materiaal:   ', item.GetValue('material'))], "ab")
-        turtlebase.general.add_to_csv(output_file, [('Streefpeil:  ', round(item.GetValue('target_lvl'), 2))], "ab")
-        turtlebase.general.add_to_csv(output_file, [('Diameter:    ', round(item.GetValue('diameter'), 2))], "ab")
-        turtlebase.general.add_to_csv(output_file, [('Lengte:      ', round(item.GetValue('length_1'), 2))], "ab")
-        turtlebase.general.add_to_csv(output_file, [('BOB1:        ', round(item.GetValue('bed_lvl_1'), 2))], "ab")
-        turtlebase.general.add_to_csv(output_file, [('BOB2:        ', round(item.GetValue('bed_lvl_2'), 2))], "ab")
+        output_file = os.path.join(output_csv, "%s.csv" % item.GetValue(config.get('column.culvert', 'name')))
+        turtlebase.general.add_to_csv(output_file, [('Location:    ', item.GetValue(config.get('column.culvert', 'name')))], "wb")
+        turtlebase.general.add_to_csv(output_file, [('Vorm:        ', item.GetValue(config.get('column.culvert', 'profile_shape')))], "ab")
+        turtlebase.general.add_to_csv(output_file, [('Materiaal:   ', item.GetValue(config.get('column.culvert', 'material')))], "ab")
+        turtlebase.general.add_to_csv(output_file, [('Streefpeil:  ', round(item.GetValue(config.get('column.culvert', 'target_level')), 2))], "ab")
+        turtlebase.general.add_to_csv(output_file, [('Diameter:    ', round(item.GetValue(config.get('column.culvert', 'diametre')), 2))], "ab")
+        turtlebase.general.add_to_csv(output_file, [('Lengte:      ', round(item.GetValue(config.get('column.culvert', 'length')), 2))], "ab")
+        turtlebase.general.add_to_csv(output_file, [('BOB1:        ', round(item.GetValue(config.get('column.culvert', 'bed_level_left')), 2))], "ab")
+        turtlebase.general.add_to_csv(output_file, [('BOB2:        ', round(item.GetValue(config.get('column.culvert', 'bed_level_right')), 2))], "ab")
 
 
 if __name__ == '__main__':
