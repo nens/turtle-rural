@@ -50,6 +50,29 @@ def main():
             log.warning("usage: <input_yz_table> <output workspace>")
             #sys.exit(1)
 
+        #---------------------------------------------------------------------
+        # Check required fields in input data
+        log.info("Check required fields in input data")
+
+        missing_fields = []
+
+        #<check required fields from input data,
+        #        append them to list if missing>
+        check_fields = {input_yz: ['proident', "xcoord", "ycoord", "target_lvl", "water_lvl", "dist_mid", "bed_lvl"]}
+        for input_fc, fieldnames in check_fields.items():
+            for fieldname in fieldnames:
+                if not turtlebase.arcgis.is_fieldname(
+                        gp, input_fc, fieldname):
+                    errormsg = "fieldname %s not available in %s" % (
+                                    fieldname, input_fc)
+                    log.error(errormsg)
+                    missing_fields.append(errormsg)
+
+        if len(missing_fields) > 0:
+            log.error("missing fields in input data: %s" % missing_fields)
+            sys.exit(2)
+        #---------------------------------------------------------------------
+
         output_graphs = os.path.join(output_workspace, "graph")
         log.info("output graphs: %s" % output_graphs)
         output_csv = os.path.join(output_workspace, "csv")

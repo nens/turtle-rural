@@ -84,9 +84,9 @@ def main():
         #<check required fields from input data,
         #        append them to list if missing>
         #check_fields = {}
-        gpgident = config.get("general", "gpgident")
-        gafident = config.get("waterbalance", "gafnaam")
-        gafnaam = config.get("waterbalance", "gafident")
+        gpgident = config.get("general", "gpgident").lower()
+        gafident = config.get("waterbalance", "gafnaam").lower()
+        gafnaam = config.get("waterbalance", "gafident").lower()
 
         check_fields = {peilgebieden_fc: [gpgident, "gafident", "gafnaam"],
                          rr_peilgebied: ["gpgident", "zomerpeil", "winterpeil"]}
@@ -104,7 +104,7 @@ def main():
             sys.exit(2)
         #---------------------------------------------------------------------
         # Environments
-        peilgebieden = nens.gp.get_table(gp, peilgebieden_fc, primary_key=gpgident)
+        peilgebieden = nens.gp.get_table(gp, peilgebieden_fc, primary_key=gpgident, no_shape=True)
         nens.gp.join_on_primary_key(gp, peilgebieden, rr_peilgebied, gpgident)
         nens.gp.join_on_primary_key(gp, peilgebieden, rr_grondsoort, gpgident)
         nens.gp.join_on_primary_key(gp, peilgebieden, rr_kwelwegzijging, gpgident)
@@ -117,8 +117,13 @@ def main():
             else:
                 polders[gafident] = {"peilgebieden": [k]}
 
-        log.info(polders)
-        log.info(peilgebieden)
+        #log.info(polders)
+        #log.info(peilgebieden)
+        for k, v in peilgebieden.items():
+            log.info(v.keys())
+
+        #turtlebase.arcgis.write_result_to_output(output_waterbezwaar_tbl,
+        #                                         gpgident, waterbezwaar)
         #---------------------------------------------------------------------
         # Delete temporary workspace geodatabase & ascii files
         try:

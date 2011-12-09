@@ -74,27 +74,27 @@ def create_centroids(gp, multipoints, output_fc, mp_ident):
         xcoord = float(feat.Centroid.split(' ')[0].replace(',', '.'))
         ycoord = float(feat.Centroid.split(' ')[1].replace(',', '.'))
 
-        center_points[item_id] = {"XCOORD": xcoord, "YCOORD": ycoord}
+        center_points[item_id] = {"xcoord": xcoord, "ycoord": ycoord}
 
     workspace = os.path.dirname(output_fc)
     fc_name = os.path.basename(output_fc)
     gp.CreateFeatureClass_management(workspace, fc_name, "Point",
                                 "#", "DISABLED", "DISABLED", "#")
-    gp.addfield(output_fc, 'PROIDENT', "TEXT")
-    gp.addfield(output_fc, 'XCOORD', "DOUBLE")
-    gp.addfield(output_fc, 'YCOORD', "DOUBLE")
+    gp.addfield(output_fc, 'proident', "TEXT")
+    gp.addfield(output_fc, 'xcoord', "DOUBLE")
+    gp.addfield(output_fc, 'ycoord', "DOUBLE")
 
     rows = gp.InsertCursor(output_fc)
     point = gp.CreateObject("Point")
 
     for point_id, attributes in center_points.items():
         row = rows.NewRow()
-        point.x = attributes['XCOORD']
-        point.y = attributes['YCOORD']
+        point.x = attributes['xcoord']
+        point.y = attributes['ycoord']
         row.shape = point
-        row.SetValue('PROIDENT', point_id)
-        row.SetValue('XCOORD', point.x)
-        row.SetValue('YCOORD', point.y)
+        row.SetValue('proident', point_id)
+        row.SetValue('xcoord', point.x)
+        row.SetValue('ycoord', point.y)
 
         rows.InsertRow(row)
     del rows
@@ -126,17 +126,31 @@ def sort_pointcloud(gp, centerpoints_d, lineparts, pointcloud):
                             centerpoint_id)
                 continue
             profiles_xyz[centerpoint_id] = sorted
-            log.debug("sorted: %s" % sorted)
+
+            sum_x = 0
+            sum_y = 0
+            cnt_x = 0
+            cnt_y = 0
+            for coords in sorted:
+                sum_x += float(coords[0])
+                cnt_x += 1
+                sum_y += float(coords[1])
+                cnt_y += 1
+
+            avg_x = sum_x / cnt_x
+            avg_y = sum_y / cnt_y
+
             abscissas = zip(nens.geom.abscissa_from_midsegment(sorted), sorted)
             log.debug("abscissas %s" % abscissas)
 
             for index, x in enumerate(abscissas):
-                log.info(index + 1)
                 profiles_yz.append({"proident": centerpoint_id,
                                     "dist_mid": x[0], "bed_lvl": x[1][2],
                                     "p_order": index + 1,
                                     "target_lvl": targetlevel,
                                     "water_lvl": waterlevel,
+                                    "xcoord": avg_x,
+                                    "ycoord": avg_y,
                                     })
         else:
             continue
@@ -151,11 +165,11 @@ def write_profiles_xyz(gp, profiles_xyz, output_xyz):
     fc_name = os.path.basename(output_xyz)
     gp.CreateFeatureClass_management(workspace, fc_name, "Point",
                                 "#", "DISABLED", "DISABLED", "#")
-    gp.addfield(output_xyz, 'PROIDENT', "TEXT")
-    gp.addfield(output_xyz, 'XCOORD', "DOUBLE")
-    gp.addfield(output_xyz, 'YCOORD', "DOUBLE")
-    gp.addfield(output_xyz, 'ZCOORD', "DOUBLE")
-    gp.addfield(output_xyz, 'P_ORDER', "SHORT")
+    gp.addfield(output_xyz, 'proident', "TEXT")
+    gp.addfield(output_xyz, 'xcoord', "DOUBLE")
+    gp.addfield(output_xyz, 'ycoord', "DOUBLE")
+    gp.addfield(output_xyz, 'zcoord', "DOUBLE")
+    gp.addfield(output_xyz, 'p_order', "SHORT")
 
     rows = gp.InsertCursor(output_xyz)
     point = gp.CreateObject("Point")
@@ -166,11 +180,11 @@ def write_profiles_xyz(gp, profiles_xyz, output_xyz):
             point.x = point_xy[0]
             point.y = point_xy[1]
             row.shape = point
-            row.SetValue('PROIDENT', point_id)
-            row.SetValue('XCOORD', point.x)
-            row.SetValue('YCOORD', point.y)
-            row.SetValue('ZCOORD', point_xy[2])
-            row.SetValue('P_ORDER', index + 1)
+            row.SetValue('proident', point_id)
+            row.SetValue('xcoord', point.x)
+            row.SetValue('ycoord', point.y)
+            row.SetValue('zcoord', point_xy[2])
+            row.SetValue('p_order', index + 1)
 
             rows.InsertRow(row)
     del rows
@@ -183,22 +197,27 @@ def write_profiles_yz(gp, profiles_yz, output_yz):
     workspace = os.path.dirname(output_yz)
     table_name = os.path.basename(output_yz)
     gp.CreateTable_management(workspace, table_name)
-    gp.addfield(output_yz, 'PROIDENT', "TEXT")
-    gp.addfield(output_yz, 'DIST_MID', "DOUBLE")
-    gp.addfield(output_yz, 'BED_LVL', "DOUBLE")
-    gp.addfield(output_yz, 'P_ORDER', "SHORT")
-    gp.addfield(output_yz, 'TARGET_LVL', "DOUBLE")
-    gp.addfield(output_yz, 'WATER_LVL', "DOUBLE")
+    gp.addfield(output_yz, 'proident', "TEXT")
+    gp.addfield(output_yz, 'dist_mid', "DOUBLE")
+    gp.addfield(output_yz, 'bed_lvl', "DOUBLE")
+    gp.addfield(output_yz, 'p_order', "SHORT")
+    gp.addfield(output_yz, 'target_lvl', "DOUBLE")
+    gp.addfield(output_yz, 'water_lvl', "DOUBLE")
+    gp.addfield(output_yz, 'xcoord', "DOUBLE")
+    gp.addfield(output_yz, 'ycoord', "DOUBLE")
 
     rows = gp.InsertCursor(output_yz)
     for attributes in profiles_yz:
         row = rows.NewRow()
-        row.SetValue('PROIDENT', attributes['proident'])
-        row.SetValue('DIST_MID', float(attributes['dist_mid']))
-        row.SetValue('BED_LVL', float(attributes['bed_lvl']))
-        row.SetValue('P_ORDER', int(attributes['p_order']))
-        row.SetValue('TARGET_LVL', float(attributes['target_lvl']))
-        row.SetValue('WATER_LVL', float(attributes['water_lvl']))
+        row.SetValue('proident', attributes['proident'])
+        row.SetValue('dist_mid', float(attributes['dist_mid']))
+        row.SetValue('bed_lvl', float(attributes['bed_lvl']))
+        row.SetValue('p_order', int(attributes['p_order']))
+        row.SetValue('target_lvl', float(attributes['target_lvl']))
+        row.SetValue('water_lvl', float(attributes['water_lvl']))
+        row.SetValue('xcoord', float(attributes['xcoord']))
+        row.SetValue('ycoord', float(attributes['ycoord']))
+
 
         rows.InsertRow(row)
     del rows
