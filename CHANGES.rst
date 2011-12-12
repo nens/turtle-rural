@@ -5,7 +5,9 @@ Changelog of turtle-rural
 3.0.3 (unreleased)
 ------------------
 
-- Nothing changed yet.
+- Miscellaneous updates.
+- Update of nens to 1.10 (from 1.6).
+- Update of turtlebase to 11.8 (from 11.6).
 
 
 3.0.2 (2011-08-09)

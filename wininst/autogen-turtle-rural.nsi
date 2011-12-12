@@ -26,7 +26,7 @@ OutFile "turtle-rural-setup.exe"
 
 ; Set default installation directory. Ideally we would like to use the $APPNAME
 ; variable but InstallDir does not seem to support that.
-InstallDir $PROGRAMFILES\Turtle-rural
+InstallDir " $PROGRAMFILES\Nelen en Schuurmans\Turtle-rural"
 
 ; Registry key to check for directory (so if you install again, it will
 ; overwrite the old one automatically)
@@ -43,8 +43,8 @@ Function .onInit
   ; of Windows registry keys
 
   StrCpy $APPNAME       "Turtle-rural"
-  StrCpy $PYTHONVERSION "2.5"
-  StrCpy $PYTHONDIR     "C:\Python25"
+  StrCpy $PYTHONVERSION ""
+  StrCpy $PYTHONDIR     "C:\"
 
   ; Extract InstallOptions files
   ; $PLUGINSDIR will automatically be removed when the installer closes
@@ -258,7 +258,7 @@ Section "Turtle-rural (required)"
   ; Unfortunately we have to install the following egg using its precies
   ; directory name. This makes the command rather fragile but NSIS does not
   ; allow wildcards in directories.
-  File /r "..\eggs\zc.buildout-1.4.4-py2.5.egg"
+  File /r "..\eggs\zc.buildout-1.4.4-py.egg"
 
   ; We install the eggs that buildout would usually download. Remember, we
   ; cannot assume we have Internet access during installation.
