@@ -73,12 +73,35 @@ def main():
             location_script = os.path.dirname(sys.argv[0])
             settings = os.path.join(location_script, config.get('RR', 'rrcf_default_settings'))
 
+        rr_config = mainutils.read_config(settings, os.path.basename(settings))
+
+        if not rr_config.get("column.peilgebied", 'paved_runoff_coefficient'):
+            log.warning("paved_runoff_coefficient not available in rr-settings, default will be used")
+            rr_config.set("column.peilgebied", 'paved_runoff_coefficient', "-")
+            rr_config.set("default.peilgebied", 'paved_runoff_coefficient', '0.2')
+
+        if not rr_config.get("column.peilgebied", 'grass_area'):
+            log.warning("grass_area not available in rr-settings, default 'ONVLAND_HA will be used")
+            rr_config.set("column.peilgebied", 'grass_area', "ONVLAND_HA")
+            rr_config.set("threshold.peilgebied", "grass_area", '0.001')
+
+        if not rr_config.get("column.peilgebied", 'nature_area'):
+            log.warning("nature_area not available in rr-settings, this field will be ignored")
+            rr_config.set("column.peilgebied", 'nature_area', "-")
+            rr_config.set("threshold.peilgebied", "nature_area", '0.001')
+
         #----------------------------------------------------------------------------------------
         #check input parameters
         log.info('Checking presence of input files')
         if not(gp.exists(peilgebieden_feature)):
             log.error("peilgebieden_feature " + peilgebieden_feature + " does not exist!")
             sys.exit(5)
+
+        # If rr_afvoer is empty, ignore this table, because trrrlib will crash
+        if sys.argv[3] != '#':
+            if turtlebase.arcgis.fc_is_empty(gp, sys.argv[3]):
+                log.warning("rr_afvoer is empty, this table will be ignored")
+                sys.argv[3] = '#'
 
         #checking if feature class contains polygons
         log.info("Checking if feature contains polygons")

@@ -77,6 +77,33 @@ def main():
             location_script = os.path.dirname(sys.argv[0])
             settings = os.path.join(location_script, config.get('RR', 'rr_rrcf_default_settings'))
 
+        rr_config = mainutils.read_config(settings, os.path.basename(settings))
+
+        if not rr_config.get("column.peilgebied", 'paved_runoff_coefficient'):
+            log.warning("paved_runoff_coefficient not available in rr+rrcf-settings, default will be used")
+            rr_config.set("column.peilgebied", 'paved_runoff_coefficient', "-")
+            rr_config.set("default.peilgebied", 'paved_runoff_coefficient', '0.2')
+
+        if not rr_config.get("column.peilgebied", 'grass_area'):
+            log.warning("grass_area not available in rr+rrcf-settings, default 'onvland_ha' will be used")
+            rr_config.set("column.peilgebied", 'grass_area', "onvland_ha")
+            rr_config.set("threshold.peilgebied", "grass_area", '0.001')
+
+        if not rr_config.get("column.peilgebied", 'nature_area'):
+            log.warning("nature_area not available in rr+rrcf-settings, this field will be ignored")
+            rr_config.set("column.peilgebied", 'nature_area', "-")
+            rr_config.set("threshold.peilgebied", "nature_area", '0.001')
+
+        #----------------------------------------------------------------------------------------
+        # Create workspace
+        workspace = config.get('GENERAL', 'location_temp')
+
+        configfilename = os.path.join(workspace, "rr_rrcf_settings_temp.ini")
+        configfile = open(configfilename, "wb")
+        rr_config.write(configfile)
+        configfile.close()
+        settings = configfilename
+        #----------------------------------------------------------------------------------------
         #checking if feature class contains polygons
         log.info("Checking if feature contains polygons")
         pg_obj = gp.describe(peilgebieden_feature)
@@ -84,6 +111,12 @@ def main():
             log.error(peilgebieden_feature + " does not contain polygons, please add a feature class with polygons")
             log.error(" - gp message: " + gp.GetMessages(2))
             sys.exit(5)
+
+        # If rr_afvoer is empty, ignore this table, because trrrlib will crash
+        if sys.argv[3] != '#':
+            if turtlebase.arcgis.fc_is_empty(gp, sys.argv[3]):
+                log.warning("rr_afvoer is empty, this table will be ignored")
+                sys.argv[3] = '#'
 
         # add xy coordinates
         xcoord = 'XCOORD'
@@ -134,7 +167,6 @@ def main():
             os.makedirs(output_sobek)
 
         log.debug("from trrrlib import trrrlib")
-        log.warning(sys.argv[2])
         trrrlib.main({}, sys.argv[1:6] + [settings] + [output_sobek] + [drainage] + [modeltype])
         if os.path.isfile(output_sobek + "/struct.def"):
             os.remove(output_sobek + "/struct.def")

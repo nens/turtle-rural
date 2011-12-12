@@ -327,7 +327,7 @@ import nens.gp
 required_fields = {
     'peilgebied': ['id', 'ycoord', 'xcoord', 'total_area',
                    'verhard_area', 'OnverhardSted_area', 'kas_area',
-                   'grass_area', 'nature_area', 'openwater_area', 'paved_runoff_coefficient', ],
+                   'grass_area', 'openwater_area', ],
     'kunstwerk': ['id', ],
     }
 
