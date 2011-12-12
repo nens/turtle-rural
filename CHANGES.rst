@@ -2,8 +2,8 @@ Changelog of turtle-rural
 =========================
 
 
-3.0.3 (unreleased)
-------------------
+3.1 (2011-12-12)
+----------------
 
 - Miscellaneous updates.
 - Update of nens to 1.10 (from 1.6).
