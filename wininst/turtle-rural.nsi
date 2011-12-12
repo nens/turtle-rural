@@ -26,7 +26,7 @@ OutFile "turtle-rural-setup.exe"
 
 ; Set default installation directory. Ideally we would like to use the $APPNAME
 ; variable but InstallDir does not seem to support that.
-InstallDir $PROGRAMFILES\Nelen & Schuurmans\Turtle-rural
+InstallDir "$PROGRAMFILES\Nelen & Schuurmans\Turtle-rural"
 
 ; Registry key to check for directory (so if you install again, it will
 ; overwrite the old one automatically)
