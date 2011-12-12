@@ -49,6 +49,13 @@ def main():
         kassen_field = config.get('controlerenoppervlakken', 'input_oppervlak_kassen')
         openwat_field = config.get('controlerenoppervlakken', 'input_oppervlak_openwat')
 
+        if not turtlebase.arcgis.is_fieldname(gp, input_oppervlak, gras_field):
+            log.error("Your Hydrobase is probably deprecated, please add %s to your rr_oppervlak table" % gras_field)
+            sys.exit(1)
+        if not turtlebase.arcgis.is_fieldname(gp, input_oppervlak, natuur_field):
+            log.error("Your Hydrobase is probably deprecated, please add %s to your rr_oppervlak table" % natuur_field)
+            sys.exit(1)
+
         input_check_bound_lower = float(config.get('controlerenoppervlakken', 'input_check_bound_lower'))
         input_check_bound_upper = float(config.get('controlerenoppervlakken', 'input_check_bound_upper'))
 
@@ -56,13 +63,27 @@ def main():
         for row in nens.gp.gp_iterator(rows):
             ident = row.GetValue(gpgident_field)
             area = row.GetValue(area_field)
+            if area is None:
+                area = 0
             verhard = row.GetValue(verhard_field)
+            if verhard is None:
+                verhard = 0
             onvsted = row.GetValue(onvsted_field)
+            if onvsted is None:
+                onvsted = 0
             gras = row.GetValue(gras_field)
+            if gras is None:
+                gras = 0
             natuur = row.GetValue(natuur_field)
+            if natuur is None:
+                natuur = 0
             #onvland = row.GetValue(onvland_field)
             kassen = row.GetValue(kassen_field)
+            if kassen is None:
+                kassen = 0
             openwat = row.GetValue(openwat_field)
+            if openwat is None:
+                openwat = 0
 
             opm_correc = ""
 
