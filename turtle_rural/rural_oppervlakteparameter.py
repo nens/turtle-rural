@@ -44,12 +44,12 @@ def conv_ha(conversion, lgn_id, ha):
         openwat = 0
         hectares = 0
         error = True
-    return {'VERHARD_LGN': verhard,
-            'ONVSTED_LGN': onvsted,
+    return {'VERHRD_LGN': verhard,
+            'ONVSTD_LGN': onvsted,
             'KASSEN_LGN': kassen,
             'GRAS_LGN': gras,
             'NATUUR_LGN': natuur,
-            'OPENWAT_LGN': openwat,
+            'OPENWT_LGN': openwat,
             'HECTARES': hectares}, error
 
 
@@ -249,12 +249,12 @@ def main():
         #definition of fields
         areaFields = {}
         areaFields = {gpgident: {'type': 'TEXT', 'length': '30'},
-                      'VERHARD_LGN':{'type': 'DOUBLE'},
-                      'ONVSTED_LGN':{'type': 'DOUBLE'},
+                      'VERHRD_LGN':{'type': 'DOUBLE'},
+                      'ONVSTD_LGN':{'type': 'DOUBLE'},
                       'KASSEN_LGN':{'type': 'DOUBLE'},
                       'GRAS_LGN':{'type': 'DOUBLE'},
                       'NATUUR_LGN':{'type': 'DOUBLE'},
-                      'OPENWAT_LGN':{'type': 'DOUBLE'},
+                      'OPENWT_LGN':{'type': 'DOUBLE'},
                       'HECTARES':{'type': 'DOUBLE'},
                       'OPNWT_GBKN':{'type': 'DOUBLE'},
                       'LGN_SOURCE':{'type': 'TEXT', 'length': '50'},

@@ -31,6 +31,20 @@ def max_gpg(tuples_list):
     return main_gpg, sum_area
 
 
+def sort_bodemsoorten(gp, intersect_bodem, gafident):
+    """
+    """
+    bodem_table = nens.gp.get_table(gp, intersect_bodem)
+    #log.info(bodem_table)
+
+
+def weighted_average_seepage(kwelwegzijging, gafident):
+    """
+    """
+
+
+
+
 def translate_soiltypes(bod1_int, bod2_int, bod3_int):
     """
     """
@@ -141,16 +155,20 @@ def main():
 
         #---------------------------------------------------------------------
         # Input parameters
-        if len(sys.argv) == 7:
-            peilgebieden_fc = sys.argv[1]
-            rr_peilgebied = sys.argv[2]
-            rr_grondsoort = sys.argv[3]
-            rr_kwelwegzijging = sys.argv[4]
-            rr_oppervlak = sys.argv[5]
-            output_waterbalance = sys.argv[6]
+        if len(sys.argv) == 5:
+            hydrobase = sys.argv[1]
+            input_kwelkaart = sys.argv[2]
+            input_bodemkaart = sys.argv[3]
+            output_waterbalance = sys.argv[4]
         else:
-            log.warning("usage: <peilgebieden> <rr_peilgebied> <rr_grondsoort> <rr_kwelwegzijging> <rr_oppervlak> <output_waterbalance>")
-            #sys.exit(1)
+            log.error("usage: <hydrobase> <input_kwelkaart> <input_bodemkaart> <output_waterbalance>")
+            sys.exit(1)
+
+        peilgebieden_fc = os.path.join(hydrobase, 'RR_Features', 'PeilGebieden')
+        rr_peilgebied = os.path.join(hydrobase, 'RR_Peilgebied')
+        rr_grondsoort = os.path.join(hydrobase, 'RR_Grondsoort')
+        rr_kwelwegzijging = os.path.join(hydrobase, 'RR_KwelWegzijging')
+        rr_oppervlak = os.path.join(hydrobase, 'RR_Oppervlak')
 
         #---------------------------------------------------------------------
         # Check required fields in input data
@@ -222,6 +240,44 @@ def main():
                          "openwat_ha", "gras_ha", "natuur_ha", "zomerpeil",
                          "winterpeil", "kwelstroom", "shape_area", "hectares"]
 
+
+        #---------------------------------------------------------------------
+        # Calculate Kwel/Wegzijging
+        if input_kwelkaart == '#' == input_bodemkaart:
+            pass
+        else:
+            workspace = config.get('GENERAL', 'location_temp')
+
+            turtlebase.arcgis.delete_old_workspace_gdb(gp, workspace)
+
+            if not os.path.isdir(workspace):
+                os.makedirs(workspace)
+            workspace_gdb, errorcode = turtlebase.arcgis.create_temp_geodatabase(gp, workspace)
+            if errorcode == 1:
+                log.error("failed to create a file geodatabase in %s" % workspace)
+
+            if input_kwelkaart != '#':
+                # Check out Spatial Analyst extension license
+                gp.CheckOutExtension("Spatial")
+
+                kwel_table = os.path.join(workspace_gdb, 'kwel_zs_table')
+                gp.ZonalStatisticsAsTable_sa(peilgebieden_fc, gpgident, input_kwelkaart, kwel_table, "NODATA")
+                kwelwegzijging = nens.gp.get_table(gp, kwel_table, primary_key=gpgident, no_shape=True)
+
+                log.info(kwelwegzijging)
+
+            if input_bodemkaart != '#':
+                temp_bodemsoort = os.path.join(workspace_gdb, "temp_bodem")
+                gp.select_analysis(input_bodemkaart, temp_bodemsoort)
+                temp_peilgebied = os.path.join(workspace_gdb, "temp_peilgebied")
+                gp.select_analysis(peilgebieden_fc, temp_peilgebied)
+                intersect_bodem = os.path.join(workspace_gdb, "intersect_bodem")
+                gp.Intersect_analysis("%s;%s" % (temp_peilgebied, temp_bodemsoort), intersect_bodem)
+
+                bodemsoorten_polders = sort_bodemsoorten(gp, intersect_bodem, gafident)
+
+        #---------------------------------------------------------------------
+        # Waterbalance
         polders = {}
         log.info("Extract data for waterbalance")
         for k, v in peilgebieden.items():
@@ -244,12 +300,16 @@ def main():
             kwelstroom, verhard_ha, onvsted_ha, kassen_ha, openwat_ha, gras_ha, natuur_ha = calculate_averages(attributes['peilgebieden'], sum_area)
             bod1_int, bod2_int, bod3_int = calculate_soiltypes(attributes['peilgebieden'])
             bod1, bod2, bod3 = translate_soiltypes(bod1_int, bod2_int, bod3_int)
+            if input_kwelkaart != '#':
+                kwelstroom = kwelwegzijging[polder]['mean']
+
             if kwelstroom > 0:
                 kwel = kwelstroom
                 wegz = 0
             else:
                 wegz = -1 * kwelstroom
                 kwel = 0
+
             winterp = peilgebieden[main_gpg]['winterpeil']
             zomerp = peilgebieden[main_gpg]['zomerpeil']
             sum_ha = sum_area / 10000
