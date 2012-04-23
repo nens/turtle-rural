@@ -48,14 +48,15 @@ def weighted_average_seepage(kwelwegzijging, gafident):
 def translate_soiltypes(bod1_int, bod2_int, bod3_int):
     """
     """
-    soildict = {1: 'Veengrond met veraarde bovengrond', 2: 'Veengrond met veraarde bovengrond, zand',
+    soildict = {0: 'Onbekend', 1: 'Veengrond met veraarde bovengrond', 2: 'Veengrond met veraarde bovengrond, zand',
                 3: 'Veengrond met kleidek', 4: 'Veengrond met kleidek op zand',
                 5: 'Veengrond met zanddek op zand', 6: 'Veengrond op ongerijpte klei',
                 7: 'Stuifzand', 8: 'Podzol (Leemarm, fijn zand)', 9: 'Podzol (zwak lemig, fijn zand)',
                 10: 'Podzol (zwak lemig, fijn zand op grof zand)', 11: 'Podzol (lemig keileem)',
                 12: 'Enkeerd (zwak lemig, fijn zand)', 13: 'Beekeerd (lemig fijn zand)',
                 14: 'Podzol (grof zand)', 15: 'Zavel', 16: 'Lichte klei', 17: 'Zware klei',
-                18: 'Klei op veen', 19: 'Klei op zand', 20: 'Klei op grof zand', 21: 'Leem'}
+                18: 'Klei op veen', 19: 'Klei op zand', 20: 'Klei op grof zand', 21: 'Leem',
+                22: 'Water', 23: 'Stedelijk gebied'}
 
     if bod1_int in range(20):
 
@@ -82,8 +83,8 @@ def calculate_soiltypes(tuples_list):
     bod3 = ["-999", 0]
 
     for peilgebied in tuples_list:
-        grondsoort = peilgebied[8]
-        oppervlak = peilgebied[10]
+        grondsoort = peilgebied[9]
+        oppervlak = peilgebied[8]
         if grondsoort in soiltypes:
             soiltypes[grondsoort] += oppervlak
         else:
@@ -109,7 +110,8 @@ def calculate_soiltypes(tuples_list):
                 bod3[1] = area
         del soiltypes[bod3[0]]
 
-    return bod1[0], bod2[0], bod3[0]
+    bodem1, bodem2, bodem3 = translate_soiltypes(bod1[0], bod2[0], bod3[0])
+    return bodem1, bodem2, bodem3
 
 
 def calculate_averages(tuples_list, total_area):
@@ -134,7 +136,7 @@ def calculate_averages(tuples_list, total_area):
 
     for peilgebied in tuples_list:
         factor = float(peilgebied[1]) / float(total_area)
-        kwelstroom += (factor * peilgebied[9])
+        kwelstroom += (factor * peilgebied[10])
         verhard_ha += peilgebied[2]
         onvsted_ha += peilgebied[3]
         kassen_ha += peilgebied[4]
@@ -164,11 +166,46 @@ def main():
             log.error("usage: <hydrobase> <input_kwelkaart> <input_bodemkaart> <output_waterbalance>")
             sys.exit(1)
 
-        peilgebieden_fc = os.path.join(hydrobase, 'RR_Features', 'PeilGebieden')
-        rr_peilgebied = os.path.join(hydrobase, 'RR_Peilgebied')
-        rr_grondsoort = os.path.join(hydrobase, 'RR_Grondsoort')
-        rr_kwelwegzijging = os.path.join(hydrobase, 'RR_KwelWegzijging')
-        rr_oppervlak = os.path.join(hydrobase, 'RR_Oppervlak')
+        peilgebieden_fc = os.path.join(hydrobase, 'RR_Features',
+                                       config.get('waterbalans',
+                                                  'peilgebieden_fc'))
+        if not gp.exists(peilgebieden_fc):
+                log.error("Features '%s' is not available in the hydrobase" % config.get('waterbalans', 'peilgebieden_fc'))
+                sys.exit(1)
+
+        rr_peilgebied = os.path.join(hydrobase,
+                                     config.get('waterbalans',
+                                                'rr_peilgebied'))
+        if not gp.exists(rr_peilgebied):
+                log.error("Table '%s' is not available in the hydrobase" % config.get('waterbalans', 'rr_peilgebied'))
+                sys.exit(1)
+
+        rr_oppervlak = os.path.join(hydrobase,
+                                    config.get('waterbalans',
+                                               'rr_oppervlak'))
+        if not gp.exists(rr_oppervlak):
+                log.error("Table '%s' is not available in the hydrobase" % config.get('waterbalans', 'rr_oppervlak'))
+                sys.exit(1)
+
+        if input_kwelkaart == '#':
+            rr_kwelwegzijging = os.path.join(hydrobase,
+                                         config.get('waterbalans',
+                                                    'rr_kwelwegzijging'))
+            if not gp.exists(rr_kwelwegzijging):
+                log.error("No seepage data available")
+                sys.exit(1)
+        else:
+            rr_kwelwegzijging = '#'
+
+        if input_bodemkaart == '#':
+            rr_grondsoort = os.path.join(hydrobase,
+                                         config.get('waterbalans',
+                                                    'rr_grondsoort'))
+            if not gp.exists(rr_grondsoort):
+                log.error("No soil data available")
+                sys.exit(1)
+        else:
+            rr_grondsoort = '#'
 
         #---------------------------------------------------------------------
         # Check required fields in input data
@@ -207,18 +244,33 @@ def main():
             errorcode += 1
 
         nr_peilgebied = turtlebase.arcgis.fc_records(gp, rr_peilgebied)
-        nr_grondsoort = turtlebase.arcgis.fc_records(gp, rr_grondsoort)
-        nr_kwelwegzijging = turtlebase.arcgis.fc_records(gp, rr_kwelwegzijging)
+        if not nr_peilgebied == nr_gpg:
+            log.error("%s (%s records) does not contain the same amount of records as %s (%s)" % (rr_peilgebied, nr_peilgebied,
+                                                                                                  peilgebieden_fc, nr_gpg))
+            errorcode += 1
+
         nr_oppervlak = turtlebase.arcgis.fc_records(gp, rr_oppervlak)
+        if not nr_oppervlak == nr_gpg:
+            log.error("%s (%s records) does not contain the same amount of records as %s (%s)" % (rr_oppervlak, nr_oppervlak,
+                                                                                                  peilgebieden_fc, nr_gpg))
+            errorcode += 1
 
-        table_cnts = {rr_peilgebied: nr_peilgebied, rr_grondsoort: nr_grondsoort,
-                      rr_kwelwegzijging: nr_kwelwegzijging, rr_oppervlak: nr_oppervlak}
-
-        for table, table_cnt in table_cnts.items():
-            if not table_cnt == nr_gpg:
-                log.error("%s (%s records) does not contain the same amount of records as %s (%s)" % (table, table_cnt,
+        if rr_grondsoort != '#':
+            nr_grondsoort = turtlebase.arcgis.fc_records(gp, rr_grondsoort)
+            if not nr_grondsoort == nr_gpg:
+                log.error("%s (%s records) does not contain the same amount of records as %s (%s)" % (rr_grondsoort, nr_grondsoort,
                                                                                                       peilgebieden_fc, nr_gpg))
                 errorcode += 1
+        else:
+            nr_grondsoort = 0
+        if rr_kwelwegzijging != '#':
+            nr_kwelwegzijging = turtlebase.arcgis.fc_records(gp, rr_kwelwegzijging)
+            if not nr_kwelwegzijging == nr_gpg:
+                log.error("%s (%s records) does not contain the same amount of records as %s (%s)" % (rr_kwelwegzijging, nr_kwelwegzijging,
+                                                                                                      peilgebieden_fc, nr_gpg))
+                errorcode += 1
+        else:
+            nr_kwelwegzijging = 0
 
         if errorcode > 0:
             log.error("%s errors found, see above" % errorcode)
@@ -229,17 +281,18 @@ def main():
         peilgebieden = nens.gp.get_table(gp, peilgebieden_fc, primary_key=gpgident, no_shape=True)
         log.info(" - join %s" % rr_peilgebied)
         nens.gp.join_on_primary_key(gp, peilgebieden, rr_peilgebied, gpgident)
-        log.info(" - join %s" % rr_grondsoort)
-        nens.gp.join_on_primary_key(gp, peilgebieden, rr_grondsoort, gpgident)
-        log.info(" - join %s" % rr_kwelwegzijging)
-        nens.gp.join_on_primary_key(gp, peilgebieden, rr_kwelwegzijging, gpgident)
         log.info(" - join %s" % rr_oppervlak)
         nens.gp.join_on_primary_key(gp, peilgebieden, rr_oppervlak, gpgident)
+        if rr_grondsoort != '#':
+            log.info(" - join %s" % rr_grondsoort)
+            nens.gp.join_on_primary_key(gp, peilgebieden, rr_grondsoort, gpgident)
+        if rr_kwelwegzijging != '#':
+            log.info(" - join %s" % rr_kwelwegzijging)
+            nens.gp.join_on_primary_key(gp, peilgebieden, rr_kwelwegzijging, gpgident)
 
-        required_keys = ["grondsoort", "verhard_ha", "onvsted_ha", "kassen_ha",
+        required_keys = ["verhard_ha", "onvsted_ha", "kassen_ha",
                          "openwat_ha", "gras_ha", "natuur_ha", "zomerpeil",
-                         "winterpeil", "kwelstroom", "shape_area", "hectares"]
-
+                         "winterpeil", "shape_area", "hectares"]
 
         #---------------------------------------------------------------------
         # Calculate Kwel/Wegzijging
@@ -261,10 +314,13 @@ def main():
                 gp.CheckOutExtension("Spatial")
 
                 kwel_table = os.path.join(workspace_gdb, 'kwel_zs_table')
-                gp.ZonalStatisticsAsTable_sa(peilgebieden_fc, gpgident, input_kwelkaart, kwel_table, "NODATA")
-                kwelwegzijging = nens.gp.get_table(gp, kwel_table, primary_key=gpgident, no_shape=True)
+                #poldershape = os.path.join(workspace_gdb, 'polders')
+                #gp.Dissolve_management(peilgebieden_fc, poldershape, gafident)
 
-                log.info(kwelwegzijging)
+                gp.ZonalStatisticsAsTable_sa(peilgebieden_fc, gafident, input_kwelkaart, kwel_table, "DATA")
+                kwelwegzijging = nens.gp.get_table(gp, kwel_table, primary_key=gafident, no_shape=True)
+
+                #log.info(kwelwegzijging)
 
             if input_bodemkaart != '#':
                 temp_bodemsoort = os.path.join(workspace_gdb, "temp_bodem")
@@ -276,6 +332,9 @@ def main():
 
                 bodemsoorten_polders = sort_bodemsoorten(gp, intersect_bodem, gafident)
 
+        """
+        WAARDES INVULLEN VAN KWEL EN BODEM IN DICT!
+        """
         #---------------------------------------------------------------------
         # Waterbalance
         polders = {}
@@ -286,22 +345,42 @@ def main():
                     log.error("Cannot find %s for gpgident: %s" % (required_key, k))
                     sys.exit(1)
 
+            if 'grondsoort' not in v:
+                grondsoort = 0
+            else:
+                grondsoort = v['grondsoort']
+
+            if 'kwelstroom' not in v:
+                kwelstroom = 0
+            else:
+                kwelstroom = v['kwelstroom']
+
             if v[gafident] in polders:
+
                 polders[v[gafident]]["peilgebieden"].append((k, v["shape_area"], v["verhard_ha"], v["onvsted_ha"], v["kassen_ha"],
-                                                             v["openwat_ha"], v["gras_ha"], v["natuur_ha"], v['grondsoort'], v['kwelstroom'], v['hectares']))
+                                                             v["openwat_ha"], v["gras_ha"], v["natuur_ha"], v['hectares'], grondsoort, kwelstroom))
             else:
                 polders[v[gafident]] = {"peilgebieden": [(k, v["shape_area"], v["verhard_ha"], v["onvsted_ha"], v["kassen_ha"],
-                                                          v["openwat_ha"], v["gras_ha"], v["natuur_ha"], v['grondsoort'], v['kwelstroom'], v['hectares'])]}
+                                                          v["openwat_ha"], v["gras_ha"], v["natuur_ha"], v['hectares'], grondsoort, kwelstroom)]}
 
         waterbalance = {}
         log.info("Calculate data for waterbalance")
         for polder, attributes in polders.items():
             main_gpg, sum_area = max_gpg(attributes['peilgebieden'])
             kwelstroom, verhard_ha, onvsted_ha, kassen_ha, openwat_ha, gras_ha, natuur_ha = calculate_averages(attributes['peilgebieden'], sum_area)
-            bod1_int, bod2_int, bod3_int = calculate_soiltypes(attributes['peilgebieden'])
-            bod1, bod2, bod3 = translate_soiltypes(bod1_int, bod2_int, bod3_int)
+            if input_bodemkaart == '#':
+                bod1, bod2, bod3 = calculate_soiltypes(attributes['peilgebieden'])
+            else:
+                bod1 = "Bodem 1"
+                bod2 = "Bodem 2"
+                bod3 = "Bodem 3"
+
             if input_kwelkaart != '#':
-                kwelstroom = kwelwegzijging[polder]['mean']
+                if polder in kwelwegzijging:
+                    kwelstroom = kwelwegzijging[polder]['mean']
+                else:
+                    kwelstroom = 0
+                    log.warning("%s has no seepage data" % polder)
 
             if kwelstroom > 0:
                 kwel = kwelstroom
