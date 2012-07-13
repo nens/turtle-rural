@@ -125,11 +125,6 @@ def main():
                       input_level_area_fc)
             geometry_check_list.append(input_level_area_fc + " -> (Polygon)")
 
-        log.debug(" - check ahn raster %s" % input_ahn_raster)
-        if gp.describe(input_ahn_raster).DataType != 'RasterDataset':
-            log.error("Input AHN is not a raster dataset")
-            sys.exit(1)
-
         if gp.describe(input_ahn_raster).PixelType[0] not in ['U', 'S']:
             log.error("Input AHN is a floating point raster, \
                     for this script an integer is necessary")
