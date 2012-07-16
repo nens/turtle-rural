@@ -44,7 +44,7 @@ Function .onInit
 
   StrCpy $APPNAME       "Turtle-rural"
   StrCpy $PYTHONVERSION ""
-  StrCpy $PYTHONDIR     "C:\"
+  StrCpy $PYTHONDIR     "C:\Python26"
 
   ; Extract InstallOptions files
   ; $PLUGINSDIR will automatically be removed when the installer closes

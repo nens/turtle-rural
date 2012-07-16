@@ -1,6 +1,6 @@
 MAKENSIS="C:/Program Files/NSIS/makensis"
 
-all: py25 py26
+all: py26
 
 py24: MAKE_PYTHONVERSION=2.4
 py24: MAKE_PYTHONDIR=Python24
@@ -24,8 +24,9 @@ clean:
 	mkdir ../bin
 
 export-tag:
-	- rm -rf $(TEMP)/turtle-rural-export
-	svn export https://office.nelen-schuurmans.nl/svn/Products/Turtle/turtle-rural/tags/$(TAGGED_VERSION) $(TEMP)/turtle-rural-export
+	#- rm -rf $(TEMP)/turtle-rural-export
+	#svn export https://office.nelen-schuurmans.nl/svn/Products/Turtle/turtle-rural/tags/$(TAGGED_VERSION) $(TEMP)/turtle-rural-export
+	echo "tmp skipped"
 	
 create-setup-from-export: export-tag
 	cd $(TEMP)/turtle-rural-export/wininst; make clean create-setup
