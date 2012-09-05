@@ -14,7 +14,42 @@ import turtlebase.general
 
 log = logging.getLogger(__name__)
 
+def create_output_dataset(output_filename, dict_fields):
+    '''
+    Creates an output feature class for the tool with specified field names
+    '''
+    out_path = os.path.dirname(output_filename)
+    out_name = os.path.basename(output_filename)
+    
+    gp.CreateFeatureClass_management(out_path, out_name, 'POINT')
+    addfieldnames(output_filename, dict_fields) 
+    
+    
+def addfieldnames(output_filename, dict_fields):
+    '''
+    Adds fields to a feature class
+    '''    
+    for fieldname, type in dict_fields.iteritems():
+        gp.AddField_management(output_filename, fieldname, type)
 
+def addvalues(fc, fieldname_ident, dict_attribs):
+    '''
+    Adds values to a fc based on a dict with the structure dict1 = {[ident]:{fieldname1: value,fieldname2: value} }
+    '''
+    # Check for fields inbouwen
+    
+    # Add values
+    row = gp.SearchCursor(fc)
+    for item in nens.gp.gp_iterator(row):
+        ovkident_value = item.getValue(fieldname_ident)
+        # check for ident in dictionary
+        if not ovkident_value in dict_attribs:
+            continue
+        
+        for fieldname, value in dict_attribs[ovkident_value].iteritems():
+            item.SetValue(fieldname,ovkident_value)
+            row.UpdateRow(item)
+    
 
 def main():
     try:
@@ -27,13 +62,25 @@ def main():
         logfile = mainutils.log_filename(config)
         logging_config = LoggingConfig(gp, logfile=logfile)
         mainutils.log_header(__name__)
+        #---------------------------------------------------------------------
+        # Create workspace
+        workspace = config.get('GENERAL', 'location_temp')
 
+        turtlebase.arcgis.delete_old_workspace_gdb(gp, workspace)
+
+        if not os.path.isdir(workspace):
+            os.makedirs(workspace)
+        workspace_gdb, errorcode = turtlebase.arcgis.create_temp_geodatabase(
+                                        gp, workspace)
+        if errorcode == 1:
+            log.error("failed to create a file geodatabase in %s" % workspace)
         #---------------------------------------------------------------------
         # Input parameters
         if len(sys.argv) == 5:
             peilgebieden_fc = sys.argv[1]
             input_duikers = sys.argv[2]
             input_waterlopen_legger = sys.argv[3]
+            output_fc = = sys.argv[4]
         else:
             log.error("usage: <peilgebieden> <duikers> <waterlopen_legger>")
             sys.exit(1)
@@ -104,11 +151,11 @@ def main():
         #---------------------------------------------------------------------
         # Join van duikers met watergangen
         # Creeer 
-        duikers_incl_watergangen = turtlebase.arcgis.get_random_file_name(temp_workspace, "")
+        duikers_incl_watergangen = turtlebase.arcgis.get_random_file_name(workspace_gdb, "")
         gp.Spatialjoin_analysis(input_duikers, input_waterlopen_legger, duikers_incl_watergangen)
         #---------------------------------------------------------------------
         # Join van duikers met peilgebieden
-        duikers_incl_peilgebieden = turtlebase.arcgis.get_random_file_name(temp_workspace, "")
+        duikers_incl_peilgebieden = turtlebase.arcgis.get_random_file_name(workspace_gdb, "")
         gp.Spatialjoin_analysis(input_duikers, peilgebieden_fc, duikers_incl_peilgebieden)
 
         # Initieer dictionary
@@ -143,13 +190,34 @@ def main():
             zomerpeil_value = item.getValue(zomerpeil)
             
         
-        # creeer output dataset 
-        # als Append gebruikt wordt, kan er gebruik worden gemaakt van fieldmapping
-        gp.Select_analysis()
+        # creeer output dataset
+        dict_fields = {verhang:'DOUBLE', bodem_hoogte_berekend:'DOUBLE',bodemhoogte_bovenstrooms:'DOUBLE',\
+                       bodemhoogte_benedenstrooms:'DOUBLE',kwkident:'TEXT', ovkident:'TEXT', gpgident:'TEXT'}
+        
+        
+         
+        # create rough copy 
+        duikers_temp = turtlebase.arcgis.get_random_file_name(workspace_gdb, "")
+        gp.Select_analysis(input_duikers,duikers_temp)
         
         # Vul de dataset met de waarden uit de dictionary
+        addfieldnames(duikers_temp, dict_fields)
+        addvalues(duikers_temp, duikers)
         
-        
+        # Create output file
+        # als Append gebruikt wordt, kan er gebruik worden gemaakt van fieldmapping
+        create_output_dataset(output_fc, dict_fields)
+        gp.Append_management(duikers_temp,output_fc, 'NO_TEST')
+                
+        #---------------------------------------------------------------------
+        # Delete temporary workspace geodatabase & ascii files
+        try:
+            log.debug("delete temporary workspace: %s" % workspace_gdb)
+            gp.delete(workspace_gdb)
+
+            log.info("workspace deleted")
+        except:
+            log.warning("failed to delete %s" % workspace_gdb)
         
         mainutils.log_footer()
     except:
