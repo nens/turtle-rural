@@ -77,5 +77,6 @@ setup(name='turtle-rural',
             'rural_import_sobek_cf = turtle_rural.rural_import_sobek_cf:main',
             'rural_culvertprofiles = turtle_rural.rural_culvertprofiles:main',
 			'rural_waterbalance = turtle_rural.rural_waterbalance:main',
+			'rural_controle_duikers = turtle_rural.rural_controle_duikers:main',
           ]},
       )
