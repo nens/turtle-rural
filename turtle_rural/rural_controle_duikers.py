@@ -359,7 +359,6 @@ def main():
         #        append them to list if missing>
         #check_fields = {}
         gpgident = config.get("general", "gpgident").lower()
-        kduident = config.get("controle_kunstwerken", "kduident").lower()
         ovkident = config.get("general", "ovkident").lower()
         
         #legger
@@ -374,6 +373,7 @@ def main():
         #verhang = config.get("controle_kunstwerken", "verhang").lower()
         
         #duikers
+        kduident = config.get("controle_kunstwerken", "kduident").lower()
         duiker_middellijn_diam= config.get("controle_kunstwerken", "duiker_middellijn_diam").lower()
         duikerhoogte_bovenstrooms= config.get("controle_kunstwerken", "duikerhoogte_bovenstrooms").lower()
         duikerhoogte_benedenstrooms= config.get("controle_kunstwerken", "duikerhoogte_benedenstrooms").lower()
@@ -401,7 +401,7 @@ def main():
         # store fieldnames in a list, for convenience in further use
         list_fieldnames_watergangen = [ovkident, bodemhoogte_benedenstrooms,bodemhoogte_bovenstrooms]
         list_fieldnames_peilgebieden = [gpgident, winterpeil, zomerpeil]
-        list_fieldnames_duikers = [duiker_middellijn_diam,duikerhoogte_bovenstrooms,duikerhoogte_benedenstrooms]
+        list_fieldnames_duikers = [kduident, duiker_middellijn_diam,duikerhoogte_bovenstrooms,duikerhoogte_benedenstrooms]
         list_fieldnames_stuwen = [kstident,stuw_hoogte]
         list_fieldnames_sifons = [ksyident,sifonhoogte_benedenstrooms,sifonhoogte_bovenstrooms,sifon_middellijn_diam,sifon_middellijn_diam2] 
         
