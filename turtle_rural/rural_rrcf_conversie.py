@@ -26,8 +26,11 @@ def add_xy_coords(gp, fc, xfield, yfield):
     """
     rows = gp.UpdateCursor(fc)
     for row in nens.gp.gp_iterator(rows):
-        row.SetValue(xfield, row.shape.centroid.split()[0])
-        row.SetValue(yfield, row.shape.centroid.split()[1])
+        part = row.Shape.GetPart(0)
+        x_list = [float(pnt.x) for pnt in nens.gp.gp_iterator(part)]
+        row.SetValue(xfield, x_list[0])
+        y_list = [float(pnt.y) for pnt in nens.gp.gp_iterator(part)]
+        row.SetValue(yfield, y_list[0])
         rows.UpdateRow(row)
 
 

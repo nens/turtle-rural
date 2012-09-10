@@ -152,16 +152,19 @@ def main():
         ovk_field = config.get('general', 'ovkident')
         missing_fields = []
         check_fields = {input_shapefile: ['Sum_OPP_LA', 'Sum_OPP_ST',
-                        'ovkident', 'from_x', 'from_y', 'to_x', 'to_y']}
+                        'from_x', 'from_y', 'to_x', 'to_y']}
+
+        if not turtlebase.arcgis.is_fieldname(gp, input_shapefile, "ovkident"):
+            errormsg = "fieldname %s not available in %s" % (
+                                    "ovkident", input_shapefile)
+            log.error(errormsg)
+            missing_fields.append(errormsg)
 
         for input_fc, fieldnames in check_fields.items():
             for fieldname in fieldnames:
                 if not turtlebase.arcgis.is_fieldname(
                         gp, input_fc, fieldname):
-                    errormsg = "fieldname %s not available in %s" % (
-                                    fieldname, input_fc)
-                    log.error(errormsg)
-                    missing_fields.append(errormsg)
+                    gp.AddField_management(input_fc, fieldname, "Double")
 
         if len(missing_fields) > 0:
             log.error("missing fields in input data: %s" % missing_fields)
