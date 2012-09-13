@@ -68,19 +68,56 @@ def get_lowest_value(list_values, nodatavalue):
             lowest_value = min(min_list)
         return lowest_value
    
-def calculate_duikers(duikers_dict, config, nodatavalue, treshold_value_verhang_duikers, \
-                      bodemhoogte_benedenstrooms, bodemhoogte_bovenstrooms, duiker_middellijn_diam,\
+def  assess_shape(duiker_vorm):
+    """
+    De codes van de vorm opening:
+    99 onbekend (aanname = rond)
+    98 Overig (aanname = rond)
+    1 rond
+    2 rechthoekig
+    3 eivormig
+    4 muil
+    5 ellips
+    6 heul
+    """
+    diameter_nodig = [1,3,4,5,6,98,99]
+    hoogte_nodig = [2]
+    
+
+def calculate_duikers(duikers_dict, config, nodatavalue, treshold_value_verhang_duikers, duiker_vorm\
+                      bodemhoogte_benedenstrooms, bodemhoogte_bovenstrooms, duiker_middellijn_diam, duiker_hoogte\
                       duikerhoogte_bovenstrooms, duikerhoogte_benedenstrooms, zomerpeil, winterpeil,\
                       output_field_duikerlengte, output_field_duikerverhang, output_field_percentage_bodem,
                       output_field_percentage_bovenwinterpeil, output_field_percentage_bovenzomerpeil):
-    '''
+    """
     input: dictionary met duiker informatie
     output: dictionary met berekende duiker informatie
     indien een berekening niet kan, of als er nodata waarden zijn dan wordt er -9999 ingevuld 
-    '''
+    
+
+    De codes van de vorm opening:
+    99 onbekend (aanname = rond)
+    98 Overig (aanname = rond)
+    1 rond
+    2 rechthoekig
+    3 eivormig
+    4 muil
+    5 ellips
+    6 heul
+    """
+    diameter_nodig = [1,3,4,5,6,98,99]
+    hoogte_nodig = [2]
+
+            
     
     for kunstwerk_ident in duikers_dict:
-
+        # Bepaal de vorm van de duikers, en kies het bijbehorende hoogteveld
+        duiker_vorm = duikers_dict[kunstwerk_ident][bodemhoogte_benedenstrooms] 
+        if duiker_vorm in hoogte_nodig:
+            hoogte = duiker_hoogte
+        else:
+            hoogte = duiker_middellijn_diam
+        
         # --------------------------------------------------------------------------------------
         # Bereken percentage boven waterspiegel
         # Neem laagste waarde van de bodemhoogte
@@ -108,31 +145,33 @@ def calculate_duikers(duikers_dict, config, nodatavalue, treshold_value_verhang_
         
         winterpeil_value= float(duikers_dict[kunstwerk_ident][winterpeil])
         zomerpeil_value= float(duikers_dict[kunstwerk_ident][zomerpeil])
-        duiker_middellijn_diam_value = duikers_dict[kunstwerk_ident][duiker_middellijn_diam]
+        hoogte_value = duikers_dict[kunstwerk_ident][hoogte]
         
         # als alle waarden valid dan toepassen, anders niet
         # Bereken percentage voor diverse peilen:
-        perc_bovenwaterlijn_zomerpeil = calc_percentage_above_waterlevel(duiker_middellijn_diam_value, duikerhoogte_value, zomerpeil_value, nodatavalue)
-        perc_bovenwaterlijn_winterpeil = calc_percentage_above_waterlevel(duiker_middellijn_diam_value, duikerhoogte_value, winterpeil_value, nodatavalue)
+        perc_bovenwaterlijn_zomerpeil = calc_percentage_above_waterlevel(hoogte_value, duikerhoogte_value, zomerpeil_value, nodatavalue)
+        perc_bovenwaterlijn_winterpeil = calc_percentage_above_waterlevel(hoogte_value, duikerhoogte_value, winterpeil_value, nodatavalue)
         duikers_dict[kunstwerk_ident][output_field_percentage_bovenwinterpeil] = round(perc_bovenwaterlijn_winterpeil,2)
         duikers_dict[kunstwerk_ident][output_field_percentage_bovenzomerpeil] = round(perc_bovenwaterlijn_zomerpeil,2)
         
         # Bereken percentage van de duiker onder bodemniveau
-        perc_under_bottomlevel = calc_percentage_under_bottomlevel(duikerhoogte_value, bodem_hoogte_berekend_value, duiker_middellijn_diam_value, nodatavalue)
+        perc_under_bottomlevel = calc_percentage_under_bottomlevel(duikerhoogte_value, bodem_hoogte_berekend_value, hoogte_value, nodatavalue)
         duikers_dict[kunstwerk_ident][output_field_percentage_bodem] = round(perc_under_bottomlevel,2)
         
     return duikers_dict
 
    
     
-def calc_percentage_under_bottomlevel(duikerhoogte_value, bodemhoogte_value, duiker_middellijn_diam_value, nodatavalue):
+def calc_percentage_under_bottomlevel(duikerhoogte_value, bodemhoogte_value, hoogte_value, nodatavalue):
     '''
     '''
-    if valid_value(duiker_middellijn_diam_value)!= nodatavalue and valid_value(duikerhoogte_value)!= nodatavalue and valid_value(bodemhoogte_value)!= nodatavalue:
-        duikerhoogte_value_nap = duikerhoogte_value + duiker_middellijn_diam_value
+    if valid_value(bodemhoogte_value)== nodatavalue:
+        perc_underbottomlevel = nodatavalue
+    elif valid_value(hoogte_value)!= nodatavalue and valid_value(duikerhoogte_value)!= nodatavalue and valid_value(bodemhoogte_value)!= nodatavalue:
+        duikerhoogte_value_nap = duikerhoogte_value + hoogte_value
         
         
-        perc_underbottomlevel = (1-(duikerhoogte_value_nap - bodemhoogte_value)/duiker_middellijn_diam_value) * 100
+        perc_underbottomlevel = (1-(duikerhoogte_value_nap - bodemhoogte_value)/hoogte_value) * 100
         if perc_underbottomlevel > 100:
             perc_underbottomlevel = 100
         if perc_underbottomlevel < 0:
@@ -142,14 +181,14 @@ def calc_percentage_under_bottomlevel(duikerhoogte_value, bodemhoogte_value, dui
     return perc_underbottomlevel
     
 
-def calc_percentage_above_waterlevel(duiker_middellijn_diam_value, duikerhoogte_value, peil, nodatavalue):
+def calc_percentage_above_waterlevel(hoogte_value, duikerhoogte_value, peil, nodatavalue):
     '''
     Berekend het percentage van de duiker boven peilniveau
     '''
-    if valid_value(duiker_middellijn_diam_value)!= nodatavalue and valid_value(duikerhoogte_value)!= nodatavalue and valid_value(peil)!= nodatavalue:
-        duikerhoogte_value_nap = duikerhoogte_value + duiker_middellijn_diam_value
+    if valid_value(hoogte_value)!= nodatavalue and valid_value(duikerhoogte_value)!= nodatavalue and valid_value(peil)!= nodatavalue:
+        duikerhoogte_value_nap = duikerhoogte_value + hoogte_value
         
-        perc_bovenwaterlijn = ((duikerhoogte_value_nap - peil)/duiker_middellijn_diam_value) * 100
+        perc_bovenwaterlijn = ((duikerhoogte_value_nap - peil)/hoogte_value) * 100
         if perc_bovenwaterlijn > 100:
             perc_bovenwaterlijn = 100
         if perc_bovenwaterlijn < 0:
@@ -375,8 +414,17 @@ def main():
         #duikers
         kduident = config.get("controle_kunstwerken", "kduident").lower()
         duiker_middellijn_diam= config.get("controle_kunstwerken", "duiker_middellijn_diam").lower()
+        duiker_vorm= config.get("controle_kunstwerken", "duiker_vorm").lower()
         duikerhoogte_bovenstrooms= config.get("controle_kunstwerken", "duikerhoogte_bovenstrooms").lower()
         duikerhoogte_benedenstrooms= config.get("controle_kunstwerken", "duikerhoogte_benedenstrooms").lower()
+        duikerhoogte= config.get("controle_kunstwerken", "duikerhoogte").lower()
+        
+        # Inlezen outputveldnamen
+        output_field_duikerlengte = config.get("controle_kunstwerken", "output_field_duikerlengte").lower()
+        output_field_duikerverhang = config.get("controle_kunstwerken", "output_field_duikerverhang").lower()
+        output_field_percentage_bodem = config.get("controle_kunstwerken", "output_field_percentage_bodem").lower()
+        output_field_percentage_bovenwinterpeil = config.get("controle_kunstwerken", "output_field_percentage_bovenwinterpeil").lower() 
+        output_field_percentage_bovenzomerpeil = config.get("controle_kunstwerken", "output_field_percentage_bovenzomerpeil").lower()
         
         #standaardwaardes
         nodatavalue = int(config.get("controle_kunstwerken", "nodatavalue").lower())
@@ -392,18 +440,21 @@ def main():
         sifonhoogte_benedenstrooms = config.get("controle_kunstwerken", "sifonhoogte_benedenstrooms").lower()
         sifonhoogte_bovenstrooms = config.get("controle_kunstwerken", "sifonhoogte_bovenstrooms").lower()
         sifon_middellijn_diam = config.get("controle_kunstwerken", "sifon_middellijn_diam").lower()
+        sifon_vorm = config.get("controle_kunstwerken", "sifon_vorm").lower()
+        sifonhoogte = config.get("controle_kunstwerken", "sifonhoogte").lower()
+        
         sifon_middellijn_diam2 = config.get("controle_kunstwerken", "sifon_middellijn_diam2").lower()
         output_field_sifonverhang = config.get("controle_kunstwerken", "output_field_sifonverhang").lower()
         output_field_sifon_percentage_bodem = config.get("controle_kunstwerken", "output_field_sifon_percentage_bodem").lower()
         output_field_sifon_percentage_bovenwinterpeil = config.get("controle_kunstwerken", "output_field_sifon_percentage_bovenwinterpeil").lower()
         output_field_sifon_percentage_bovenzomerpeil = config.get("controle_kunstwerken", "output_field_sifon_percentage_bovenzomerpeil").lower()
-        
+
         # store fieldnames in a list, for convenience in further use
         list_fieldnames_watergangen = [ovkident, bodemhoogte_benedenstrooms,bodemhoogte_bovenstrooms]
         list_fieldnames_peilgebieden = [gpgident, winterpeil, zomerpeil]
-        list_fieldnames_duikers = [kduident, duiker_middellijn_diam,duikerhoogte_bovenstrooms,duikerhoogte_benedenstrooms]
+        list_fieldnames_duikers = [kduident, duiker_middellijn_diam,duikerhoogte_bovenstrooms,duikerhoogte_benedenstrooms, duiker_vorm]
         list_fieldnames_stuwen = [kstident,stuw_hoogte]
-        list_fieldnames_sifons = [ksyident,sifonhoogte_benedenstrooms,sifonhoogte_bovenstrooms,sifon_middellijn_diam,sifon_middellijn_diam2] 
+        list_fieldnames_sifons = [ksyident,sifonhoogte_benedenstrooms,sifonhoogte_bovenstrooms,sifon_middellijn_diam,sifon_middellijn_diam2, sifon_vorm] 
         
         check_fields = {peilgebieden_fc: list_fieldnames_peilgebieden,
                          input_waterlopen_legger: list_fieldnames_watergangen,
@@ -463,25 +514,19 @@ def main():
             duikers_incl_peilgebieden = turtlebase.arcgis.get_random_file_name(workspace_gdb, "")
             gp.Spatialjoin_analysis(input_duikers, peilgebieden_fc, duikers_incl_peilgebieden)
             duikers = add_fc_values_to_dict(gp, duikers_incl_peilgebieden, duikers, kduident, list_fieldnames_peilgebieden)
-            # Inlezen data uit de duikers
-            
+            # Inlezen data uit de duikers            
             output_field_duikerlengte = config.get("controle_kunstwerken", "output_field_duikerlengte").lower()
             duikers = add_fc_attribs_to_dict(gp, duikers_incl_peilgebieden, duikers, kduident, 'Length', output_field_duikerlengte)
             duikers = add_fc_values_to_dict(gp, duikers_incl_peilgebieden, duikers, kduident, list_fieldnames_duikers)
             
+            
             #---------------------------------------------------------------------
             # Berekeningen
-            log.info('Start calculation')
             
-            # Inlezen outputveldnamen
-            output_field_duikerlengte = config.get("controle_kunstwerken", "output_field_duikerlengte").lower()
-            output_field_duikerverhang = config.get("controle_kunstwerken", "output_field_duikerverhang").lower()
-            output_field_percentage_bodem = config.get("controle_kunstwerken", "output_field_percentage_bodem").lower()
-            output_field_percentage_bovenwinterpeil = config.get("controle_kunstwerken", "output_field_percentage_bovenwinterpeil").lower() 
-            output_field_percentage_bovenzomerpeil = config.get("controle_kunstwerken", "output_field_percentage_bovenzomerpeil").lower()
-
-            duikers = calculate_duikers(duikers, config, nodatavalue, treshold_value_verhang_duikers, \
-                          bodemhoogte_benedenstrooms, bodemhoogte_bovenstrooms,duiker_middellijn_diam,\
+            # Bereken de percentages onder en boven maaiveld
+            log.info('Start calculation')
+            duikers = calculate_duikers(duikers, config, nodatavalue, treshold_value_verhang_duikers, duiker_vorm\
+                          bodemhoogte_benedenstrooms, bodemhoogte_bovenstrooms,duiker_middellijn_diam, duikerhoogte\
                           duikerhoogte_bovenstrooms,duikerhoogte_benedenstrooms, zomerpeil, winterpeil,\
                           output_field_duikerlengte, output_field_duikerverhang, output_field_percentage_bodem,\
                           output_field_percentage_bovenwinterpeil, output_field_percentage_bovenzomerpeil)
@@ -558,15 +603,9 @@ def main():
             #---------------------------------------------------------------------
             # Berekeningen
             log.info('Start calculation')
-            
-            # Inlezen outputveldnamen
-            output_field_sifonverhang = config.get("controle_kunstwerken", "output_field_sifonverhang").lower()
-            output_field_sifon_percentage_bodem = config.get("controle_kunstwerken", "output_field_sifon_percentage_bodem").lower()
-            output_field_sifon_percentage_bovenwinterpeil = config.get("controle_kunstwerken", "output_field_sifon_percentage_bovenwinterpeil").lower() 
-            output_field_sifon_percentage_bovenzomerpeil = config.get("controle_kunstwerken", "output_field_sifon_percentage_bovenzomerpeil").lower()
 
-            sifons = calculate_duikers(sifons, config, nodatavalue, treshold_value_verhang_sifons, \
-                          bodemhoogte_benedenstrooms, bodemhoogte_bovenstrooms,sifon_middellijn_diam,\
+            sifons = calculate_duikers(sifons, config, nodatavalue, treshold_value_verhang_sifons, sifon_vorm\
+                          bodemhoogte_benedenstrooms, bodemhoogte_bovenstrooms,sifon_middellijn_diam, sifonhoogte\
                           sifonhoogte_bovenstrooms,sifonhoogte_benedenstrooms, zomerpeil, winterpeil,\
                           output_field_sifonlengte, output_field_sifonverhang, output_field_sifon_percentage_bodem,\
                           output_field_sifon_percentage_bovenwinterpeil, output_field_sifon_percentage_bovenzomerpeil)
