@@ -68,27 +68,13 @@ def get_lowest_value(list_values, nodatavalue):
             lowest_value = min(min_list)
         return lowest_value
    
-def  assess_shape(duiker_vorm):
-    """
-    De codes van de vorm opening:
-    99 onbekend (aanname = rond)
-    98 Overig (aanname = rond)
-    1 rond
-    2 rechthoekig
-    3 eivormig
-    4 muil
-    5 ellips
-    6 heul
-    """
-    diameter_nodig = [1,3,4,5,6,98,99]
-    hoogte_nodig = [2]
     
 
-def calculate_duikers(duikers_dict, config, nodatavalue, treshold_value_verhang_duikers, duiker_vorm\
-                      bodemhoogte_benedenstrooms, bodemhoogte_bovenstrooms, duiker_middellijn_diam, duiker_hoogte\
-                      duikerhoogte_bovenstrooms, duikerhoogte_benedenstrooms, zomerpeil, winterpeil,\
+def calculate_duikers(duikers_dict, config, nodatavalue, treshold_value_verhang_duikers, duiker_vorm,\
+                      bodemhoogte_benedenstrooms, bodemhoogte_bovenstrooms, duiker_middellijn_diam, duiker_hoogte,\
+                      duikerhoogte_bovenstrooms, duikerhoogte_benedenstrooms, zomerpeil, winterpeil,lengte_waterloop,\
                       output_field_duikerlengte, output_field_duikerverhang, output_field_percentage_bodem,
-                      output_field_percentage_bovenwinterpeil, output_field_percentage_bovenzomerpeil):
+                      output_field_percentage_bovenwinterpeil, output_field_percentage_bovenzomerpeil,output_field_verhang_bodem):
     """
     input: dictionary met duiker informatie
     output: dictionary met berekende duiker informatie
@@ -112,9 +98,12 @@ def calculate_duikers(duikers_dict, config, nodatavalue, treshold_value_verhang_
     
     for kunstwerk_ident in duikers_dict:
         # Bepaal de vorm van de duikers, en kies het bijbehorende hoogteveld
-        duiker_vorm = duikers_dict[kunstwerk_ident][bodemhoogte_benedenstrooms] 
-        if duiker_vorm in hoogte_nodig:
+        
+        duiker_vorm_value = duikers_dict[kunstwerk_ident][duiker_vorm]
+        
+        if duiker_vorm_value in hoogte_nodig:
             hoogte = duiker_hoogte
+            
         else:
             hoogte = duiker_middellijn_diam
         
@@ -124,6 +113,11 @@ def calculate_duikers(duikers_dict, config, nodatavalue, treshold_value_verhang_
         
         bodemhoogte_benedenstrooms_value = duikers_dict[kunstwerk_ident][bodemhoogte_benedenstrooms] 
         bodemhoogte_bovenstrooms_value = duikers_dict[kunstwerk_ident][bodemhoogte_bovenstrooms] 
+        lengte_waterloop_value = duikers_dict[kunstwerk_ident][lengte_waterloop]
+        
+        verhang_bodem_value = calc_verhang(bodemhoogte_bovenstrooms_value, bodemhoogte_benedenstrooms_value, lengte_waterloop_value, nodatavalue)
+        duikers_dict[kunstwerk_ident][output_field_verhang_bodem] = verhang_bodem_value
+        
         bodem_hoogte_berekend_value = get_lowest_value([bodemhoogte_bovenstrooms_value,bodemhoogte_benedenstrooms_value], nodatavalue)
         
         duikerhoogte_bovenstrooms_value = duikers_dict[kunstwerk_ident][duikerhoogte_bovenstrooms]
@@ -293,10 +287,10 @@ def calc_verhang(h_bo, h_be, lengte, nodatavalue):
             verhang_value = None
             return verhang_value
     # Als er nodata is in 1 van de beide velden voor verhang dan nodatavalue teruggeven
-    if h_bo == nodatavalue or h_be = nodatavalue:
+    if h_bo == nodatavalue or h_be == nodatavalue:
         verhang_value = nodatavalue
     else:
-        verhang_value = (h_bo -  h_be) / lengte
+        verhang_value = (float(h_bo) -  float(h_be)) / float(lengte)
     return verhang_value
 
     
@@ -306,7 +300,6 @@ def create_output_dataset(gp, output_filename, dict_fields, type= 'POLYLINE'):
     '''
     out_path = os.path.dirname(output_filename)
     out_name = os.path.basename(output_filename)
-    
     gp.CreateFeatureClass_management(out_path, out_name, type)
     addfieldnames(gp, output_filename, dict_fields) 
     
@@ -407,7 +400,8 @@ def main():
         bodemhoogte_benedenstrooms = config.get("controle_kunstwerken", "bodemhoogte_benedenstrooms").lower()
         bodemhoogte_bovenstrooms = config.get("controle_kunstwerken", "bodemhoogte_bovenstrooms").lower()
         bodem_hoogte_berekend = config.get("controle_kunstwerken", "bodem_hoogte_berekend").lower()
-        
+        lengte_waterloop = config.get("controle_kunstwerken", "lengte_waterloop").lower()
+        output_field_verhang_bodem = config.get("controle_kunstwerken", "output_field_verhang_bodem").lower()
         #peilgebieden
         winterpeil = config.get("controle_kunstwerken", "winterpeil").lower()
         zomerpeil = config.get("controle_kunstwerken", "zomerpeil").lower()
@@ -455,11 +449,11 @@ def main():
         output_field_sifon_percentage_bovenzomerpeil = config.get("controle_kunstwerken", "output_field_sifon_percentage_bovenzomerpeil").lower()
 
         # store fieldnames in a list, for convenience in further use
-        list_fieldnames_watergangen = [ovkident, bodemhoogte_benedenstrooms,bodemhoogte_bovenstrooms]
+        list_fieldnames_watergangen = [ovkident, bodemhoogte_benedenstrooms,bodemhoogte_bovenstrooms, lengte_waterloop]
         list_fieldnames_peilgebieden = [gpgident, winterpeil, zomerpeil]
-        list_fieldnames_duikers = [kduident, duiker_middellijn_diam,duikerhoogte_bovenstrooms,duikerhoogte_benedenstrooms, duiker_vorm, duiker_lengte]
+        list_fieldnames_duikers = [kduident, duiker_middellijn_diam,duikerhoogte_bovenstrooms,duikerhoogte_benedenstrooms, duikerhoogte, duiker_vorm, duiker_lengte]
         list_fieldnames_stuwen = [kstident,stuw_hoogte]
-        list_fieldnames_sifons = [ksyident,sifonhoogte_benedenstrooms,sifonhoogte_bovenstrooms,sifon_middellijn_diam,sifon_middellijn_diam2, sifon_vorm, sifon_lengte] 
+        list_fieldnames_sifons = [ksyident,sifonhoogte_benedenstrooms,sifonhoogte_bovenstrooms,sifon_middellijn_diam,sifon_middellijn_diam2, sifon_vorm, sifon_lengte, sifonhoogte] 
         
         check_fields = {peilgebieden_fc: list_fieldnames_peilgebieden,
                          input_waterlopen_legger: list_fieldnames_watergangen,
@@ -530,11 +524,11 @@ def main():
             
             # Bereken de percentages onder en boven maaiveld
             log.info('Start calculation')
-            duikers = calculate_duikers(duikers, config, nodatavalue, treshold_value_verhang_duikers, duiker_vorm\
-                          bodemhoogte_benedenstrooms, bodemhoogte_bovenstrooms,duiker_middellijn_diam, duikerhoogte\
-                          duikerhoogte_bovenstrooms,duikerhoogte_benedenstrooms, zomerpeil, winterpeil,\
+            duikers = calculate_duikers(duikers, config, nodatavalue, treshold_value_verhang_duikers, duiker_vorm,\
+                          bodemhoogte_benedenstrooms, bodemhoogte_bovenstrooms,duiker_middellijn_diam, duikerhoogte,\
+                          duikerhoogte_bovenstrooms,duikerhoogte_benedenstrooms, zomerpeil, winterpeil,lengte_waterloop,\
                           duiker_lengte, output_field_duikerverhang, output_field_percentage_bodem,\
-                          output_field_percentage_bovenwinterpeil, output_field_percentage_bovenzomerpeil)
+                          output_field_percentage_bovenwinterpeil, output_field_percentage_bovenzomerpeil,output_field_verhang_bodem)
                           
             #log.info(duikers)
             #log.info('dict_fields %s' %dict_fields)
@@ -609,11 +603,11 @@ def main():
             # Berekeningen
             log.info('Start calculation')
 
-            sifons = calculate_duikers(sifons, config, nodatavalue, treshold_value_verhang_sifons, sifon_vorm\
-                          bodemhoogte_benedenstrooms, bodemhoogte_bovenstrooms,sifon_middellijn_diam, sifonhoogte\
-                          sifonhoogte_bovenstrooms,sifonhoogte_benedenstrooms, zomerpeil, winterpeil,\
+            sifons = calculate_duikers(sifons, config, nodatavalue, treshold_value_verhang_sifons, sifon_vorm,\
+                          bodemhoogte_benedenstrooms, bodemhoogte_bovenstrooms,sifon_middellijn_diam, sifonhoogte,\
+                          sifonhoogte_bovenstrooms,sifonhoogte_benedenstrooms, zomerpeil, winterpeil,lengte_waterloop,\
                           sifon_lengte, output_field_sifonverhang, output_field_sifon_percentage_bodem,\
-                          output_field_sifon_percentage_bovenwinterpeil, output_field_sifon_percentage_bovenzomerpeil)
+                          output_field_sifon_percentage_bovenwinterpeil, output_field_sifon_percentage_bovenzomerpeil,output_field_verhang_bodem)
                           
             
             #log.info('dict_fields %s' %dict_fields)
