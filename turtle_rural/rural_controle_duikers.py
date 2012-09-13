@@ -134,7 +134,7 @@ def calculate_duikers(duikers_dict, config, nodatavalue, treshold_value_verhang_
         # --------------------------------------------------------------------------------------
         # Bereken verhang duiker
         lengte =  duikers_dict[kunstwerk_ident][output_field_duikerlengte]
-        verhang_value = calc_verhang(duikerhoogte_bovenstrooms_value, duikerhoogte_benedenstrooms_value,lengte)
+        verhang_value = calc_verhang(duikerhoogte_bovenstrooms_value, duikerhoogte_benedenstrooms_value,lengte, nodatavalue)
         if verhang_value == None:
             log.warning('Verhang kon niet berekend worden voor kunstwerk %s' %kunstwerk_ident)
         if verhang_value > treshold_value_verhang_duikers:
@@ -281,7 +281,7 @@ def valid_value(value):
     else:
         return True
     
-def calc_verhang(h_bo, h_be, lengte):
+def calc_verhang(h_bo, h_be, lengte, nodatavalue):
     '''
     bereken verhang
     '''
@@ -292,8 +292,11 @@ def calc_verhang(h_bo, h_be, lengte):
             log.warning('Verhang wordt niet berekend')
             verhang_value = None
             return verhang_value
-            
-    verhang_value = (h_bo -  h_be) / lengte
+    # Als er nodata is in 1 van de beide velden voor verhang dan nodatavalue teruggeven
+    if h_bo == nodatavalue or h_be = nodatavalue:
+        verhang_value = nodatavalue
+    else:
+        verhang_value = (h_bo -  h_be) / lengte
     return verhang_value
 
     
@@ -415,6 +418,7 @@ def main():
         kduident = config.get("controle_kunstwerken", "kduident").lower()
         duiker_middellijn_diam= config.get("controle_kunstwerken", "duiker_middellijn_diam").lower()
         duiker_vorm= config.get("controle_kunstwerken", "duiker_vorm").lower()
+        duiker_lengte= config.get("controle_kunstwerken", "duiker_lengte").lower()
         duikerhoogte_bovenstrooms= config.get("controle_kunstwerken", "duikerhoogte_bovenstrooms").lower()
         duikerhoogte_benedenstrooms= config.get("controle_kunstwerken", "duikerhoogte_benedenstrooms").lower()
         duikerhoogte= config.get("controle_kunstwerken", "duikerhoogte").lower()
@@ -441,6 +445,7 @@ def main():
         sifonhoogte_bovenstrooms = config.get("controle_kunstwerken", "sifonhoogte_bovenstrooms").lower()
         sifon_middellijn_diam = config.get("controle_kunstwerken", "sifon_middellijn_diam").lower()
         sifon_vorm = config.get("controle_kunstwerken", "sifon_vorm").lower()
+        sifon_lengte = config.get("controle_kunstwerken", "sifon_lengte").lower()
         sifonhoogte = config.get("controle_kunstwerken", "sifonhoogte").lower()
         
         sifon_middellijn_diam2 = config.get("controle_kunstwerken", "sifon_middellijn_diam2").lower()
@@ -452,9 +457,9 @@ def main():
         # store fieldnames in a list, for convenience in further use
         list_fieldnames_watergangen = [ovkident, bodemhoogte_benedenstrooms,bodemhoogte_bovenstrooms]
         list_fieldnames_peilgebieden = [gpgident, winterpeil, zomerpeil]
-        list_fieldnames_duikers = [kduident, duiker_middellijn_diam,duikerhoogte_bovenstrooms,duikerhoogte_benedenstrooms, duiker_vorm]
+        list_fieldnames_duikers = [kduident, duiker_middellijn_diam,duikerhoogte_bovenstrooms,duikerhoogte_benedenstrooms, duiker_vorm, duiker_lengte]
         list_fieldnames_stuwen = [kstident,stuw_hoogte]
-        list_fieldnames_sifons = [ksyident,sifonhoogte_benedenstrooms,sifonhoogte_bovenstrooms,sifon_middellijn_diam,sifon_middellijn_diam2, sifon_vorm] 
+        list_fieldnames_sifons = [ksyident,sifonhoogte_benedenstrooms,sifonhoogte_bovenstrooms,sifon_middellijn_diam,sifon_middellijn_diam2, sifon_vorm, sifon_lengte] 
         
         check_fields = {peilgebieden_fc: list_fieldnames_peilgebieden,
                          input_waterlopen_legger: list_fieldnames_watergangen,
@@ -516,7 +521,7 @@ def main():
             duikers = add_fc_values_to_dict(gp, duikers_incl_peilgebieden, duikers, kduident, list_fieldnames_peilgebieden)
             # Inlezen data uit de duikers            
             output_field_duikerlengte = config.get("controle_kunstwerken", "output_field_duikerlengte").lower()
-            duikers = add_fc_attribs_to_dict(gp, duikers_incl_peilgebieden, duikers, kduident, 'Length', output_field_duikerlengte)
+            #duikers = add_fc_attribs_to_dict(gp, duikers_incl_peilgebieden, duikers, kduident, 'Length', output_field_duikerlengte)
             duikers = add_fc_values_to_dict(gp, duikers_incl_peilgebieden, duikers, kduident, list_fieldnames_duikers)
             
             
@@ -528,7 +533,7 @@ def main():
             duikers = calculate_duikers(duikers, config, nodatavalue, treshold_value_verhang_duikers, duiker_vorm\
                           bodemhoogte_benedenstrooms, bodemhoogte_bovenstrooms,duiker_middellijn_diam, duikerhoogte\
                           duikerhoogte_bovenstrooms,duikerhoogte_benedenstrooms, zomerpeil, winterpeil,\
-                          output_field_duikerlengte, output_field_duikerverhang, output_field_percentage_bodem,\
+                          duiker_lengte, output_field_duikerverhang, output_field_percentage_bodem,\
                           output_field_percentage_bovenwinterpeil, output_field_percentage_bovenzomerpeil)
                           
             #log.info(duikers)
@@ -607,7 +612,7 @@ def main():
             sifons = calculate_duikers(sifons, config, nodatavalue, treshold_value_verhang_sifons, sifon_vorm\
                           bodemhoogte_benedenstrooms, bodemhoogte_bovenstrooms,sifon_middellijn_diam, sifonhoogte\
                           sifonhoogte_bovenstrooms,sifonhoogte_benedenstrooms, zomerpeil, winterpeil,\
-                          output_field_sifonlengte, output_field_sifonverhang, output_field_sifon_percentage_bodem,\
+                          sifon_lengte, output_field_sifonverhang, output_field_sifon_percentage_bodem,\
                           output_field_sifon_percentage_bovenwinterpeil, output_field_sifon_percentage_bovenzomerpeil)
                           
             
