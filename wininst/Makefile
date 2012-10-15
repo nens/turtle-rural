@@ -14,6 +14,10 @@ py26: MAKE_PYTHONVERSION=2.6
 py26: MAKE_PYTHONDIR=Python26
 py26: create-setup-from-export
 
+py27: MAKE_PYTHONVERSION=2.7
+py27: MAKE_PYTHONDIR=Python27
+py27: create-setup-from-export
+
 clean:
 	- rm -rf ../downloads
 	- rm -rf ../eggs
