@@ -25,13 +25,16 @@ def populate_ident(gp, fc, fieldname_ident):
         rows.UpdateRow(row)
         row = rows.Next()
     
-def create_where_clause_kunstwerken_zonder_peilscheiding(gp, fc, list_idents):
+def create_where_clause_kunstwerken_zonder_peilscheiding(gp, fc, fieldname_ident1, fieldname_ident2, list_idents):
     '''
     Creates a where clause usable in arcgis. for all items NOT in provided list_idents
     '''
-    return ''
+    where_clause1 = create_where_clause_peilscheiding_vereist(gp, fc, fieldname_ident1, list_idents)
+    where_clause2 = create_where_clause_peilscheiding_vereist(gp, fc, fieldname_ident2, list_idents)
+    
+    return where_clause1 + " OR " + where_clause2
 
-def create_where_clause_peilscheiding_vereist(gp, fc, fieldname_object, objects_list): #fieldname_ident_kst, fieldname_ident_kgm, 
+def create_where_clause_peilscheiding_vereist(gp, fc, fieldname_object, objects_list):  
     '''
     Creates a where clause usable in arcgis. For all items NOT provided in 
     '''
@@ -40,19 +43,15 @@ def create_where_clause_peilscheiding_vereist(gp, fc, fieldname_object, objects_
     rows = gp.SearchCursor(fc)
     row = rows.Next()
     while row:
-        
-    
-#        ident_value_kst = row.getValue(fieldname_ident_kst)
-#        ident_value_kgm = row.getValue(fieldname_ident_kgm)
-#        if ident_value_kgm == None and ident_value_kst == None:
-            
+             
         ident_value_wc =  row.getValue(fieldname_object)
         if not ident_value_wc in objects_list:
-            list_ident_values_wc.append('"' + fieldname_object + '"' + ' <> ' + str(ident_value_wc))
+            if ident_value_wc != None:
+                list_ident_values_wc.append('"' + fieldname_object + '"' + ' = ' + "'" + str(ident_value_wc) + "'")
         
         row = rows.Next()
     
-    where_clause = " AND ".join(list_ident_values_wc)
+    where_clause = " OR ".join(list_ident_values_wc)
     return where_clause
 
 def read_idents(gp, fc, fieldname_ident):
@@ -66,9 +65,10 @@ def read_idents(gp, fc, fieldname_ident):
     while row:
         ident_value = row.GetValue(fieldname_ident)
         if not ident_value in list_idents:
-            list_idents.append(ident_value)
+            if ident_value!= None:
+                list_idents.append(ident_value)
         else:
-            log.warning('De ident %s komt dubbel voor in %s' %(ident_value,fc))
+            log.debug('De ident %s komt dubbel voor in %s' %(ident_value,fc))
         row = rows.Next()
     return list_idents
 
@@ -106,7 +106,7 @@ def main():
             gemalen_input = sys.argv[4]
             afstand_input = sys.argv[5]
             output_peilscheiding_vereist = sys.argv[6]
-            dummy = sys.argv[7]
+            output_kunstwerken_zonder_peilscheiding = sys.argv[7]
               
         else:
             log.warning("usage: <argument1> <argument2>")
@@ -177,10 +177,6 @@ def main():
         peilscheidingen = turtlebase.arcgis.get_random_file_name(workspace_gdb, "")
         correcte_peilscheidingen =  turtlebase.arcgis.get_random_file_name(workspace_gdb, "")
         peilscheidingen_buffer =  turtlebase.arcgis.get_random_file_name(workspace_gdb, "")
-        log.info('kunstwerken_merged %s' %kunstwerken_merged)
-        log.info('kunstwerken_merged_buffer %s' %kunstwerken_merged_buffer)
-        log.info('peilscheidingen %s' %peilscheidingen)
-        log.info('correcte_peilscheidingen %s' %correcte_peilscheidingen)
         
         # Read kunstwerken ids
         log.info('Reading which kunstwerken are available')
@@ -201,7 +197,7 @@ def main():
         # Aanmaken unieke ident peilscheidingen
         peilscheidingident_fieldname = 't_id'
         if turtlebase.arcgis.is_fieldname(gp, peilscheidingen, peilscheidingident_fieldname) == False:
-            gp.Addfield_management(peilscheidingen, peilscheidingident_fieldname, 'LONG')
+            gp.Addfield_management(peilscheidingen, peilscheidingident_fieldname, 'TEXT')
         # Populate ident peilscheidingen 
         populate_ident(gp, peilscheidingen, peilscheidingident_fieldname)
         
@@ -215,16 +211,24 @@ def main():
         gp.Intersect_analysis("%s #;%s #" %(kunstwerken_merged, peilscheidingen_buffer), correcte_peilscheidingen, "ALL", "", "POINT")
         
         # Tijdelijke proces:
-#        where_clause = create_where_clause_kunstwerken_zonder_peilscheiding()
+        
         log.info('Selecteren van locaties waar verwachte peilscheiding niet aanwezig')
-#        list_kunstwerken_idents = list_gemalen_idents + list_stuwen_idents
-#        log.info(list_kunstwerken_idents)
+        
         list_peilscheidingen_idents = read_idents(gp, correcte_peilscheidingen, peilscheidingident_fieldname) 
         
         where_clause_peilscheiding_vereist = create_where_clause_peilscheiding_vereist(gp, peilscheidingen, peilscheidingident_fieldname, list_peilscheidingen_idents)
-        log.info(where_clause_peilscheiding_vereist)
         gp.Select_analysis(peilscheidingen, output_peilscheiding_vereist, where_clause_peilscheiding_vereist)
-        gp.Select_analysis(correcte_peilscheidingen, dummy)
+        
+        log.info('Selecteren van kunstwerken die niet op een peilscheiding liggen')
+        # Create list met kunstwerken die op een peilscheiding liggen
+        list_kst_met_peilscheiding =  read_idents(gp, correcte_peilscheidingen, kstident_fieldname)
+        list_kgm_met_peilscheiding =  read_idents(gp, correcte_peilscheidingen, kgmident_fieldname)
+        list_kunstwerken_met_peilscheiding = list_kgm_met_peilscheiding + list_kst_met_peilscheiding
+        
+        
+        where_clause_kw_zonder_peilscheiding = create_where_clause_kunstwerken_zonder_peilscheiding(gp, kunstwerken_merged, kstident_fieldname, kgmident_fieldname, list_kunstwerken_met_peilscheiding)
+        
+        gp.Select_analysis(kunstwerken_merged, output_kunstwerken_zonder_peilscheiding, where_clause_kw_zonder_peilscheiding)
         #---------------------------------------------------------------------
         # Delete temporary workspace geodatabase & ascii files
         try:
