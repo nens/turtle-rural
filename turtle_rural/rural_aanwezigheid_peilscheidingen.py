@@ -50,7 +50,9 @@ def main():
             stuwen_input = sys.argv[3]
             gemalen_input = sys.argv[4]
             afstand_input = sys.argv[5]
-            output_peilscheiding_vereist = sys.argv[6] 
+            output_peilscheiding_vereist = sys.argv[6]
+            dummy = sys.argv[7]
+              
         else:
             log.warning("usage: <argument1> <argument2>")
             #sys.exit(1)
@@ -129,9 +131,9 @@ def main():
         
         # Process: Intersect (2)
         log.info('Controle aanwezige peilscheidingen')
-        gp.Intersect_analysis("%s #;C:\\Users\\jonas.vanschrojenste\\Documents\\ArcGIS\\Default.gdb\\watergang_as_Intersect #" %(kunstwerken_merged_buffer, peilscheidingen), correcte_peilscheidingen, "ALL", "", "POINT")
+        gp.Intersect_analysis("%s #;%s #" %(kunstwerken_merged_buffer, peilscheidingen), correcte_peilscheidingen, "ALL", "", "POINT")
         
-
+        # Tijdelijke proces:
         gp.Select_analysis(correcte_peilscheidingen, output_peilscheiding_vereist)
         
         #---------------------------------------------------------------------
