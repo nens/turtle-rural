@@ -47,8 +47,8 @@ def get_pointcloud(gp, point_fc, point_ident):
         feat = item.GetValue(point_desc.ShapeFieldName)
         item_id = item.GetValue(point_ident)
 
-        pnt_xyz = (round(float(feat.Centroid.split(' ')[0].replace(',', '.')), 5),
-                  round(float(feat.Centroid.split(' ')[1].replace(',', '.')), 5),
+        pnt_xyz = (feat.Centroid.X,
+                  feat.Centroid.Y,
                   float(item.GetValue('ZCOORD')))
 
         if item_id not in pointcloud:
@@ -71,8 +71,8 @@ def create_centroids(gp, multipoints, output_fc, mp_ident):
     for item in nens.gp.gp_iterator(row):
         feat = item.GetValue(mpoint_desc.ShapeFieldName)
         item_id = item.GetValue(mp_ident)
-        xcoord = float(feat.Centroid.split(' ')[0].replace(',', '.'))
-        ycoord = float(feat.Centroid.split(' ')[1].replace(',', '.'))
+        xcoord = feat.Centroid.X
+        ycoord = feat.Centroid.Y
 
         center_points[item_id] = {"xcoord": xcoord, "ycoord": ycoord}
 

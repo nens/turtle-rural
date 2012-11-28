@@ -91,15 +91,17 @@ def main():
         gp.Intersect_analysis(input_polygon_fc + ";" + input_channel_fc, intersect_waterlijn)
 
         polygon_list = []
+        counter = 0
         for k, v in polygon_dict.items():
+            counter += 1
             log.info("extract polygon %s" % k)
 
-            huidig_peilgebied_lyr = turtlebase.arcgis.get_random_layer_name()
+            huidig_peilgebied_lyr = "gpg_%s" % counter
             gp.MakeFeatureLayer(input_polygon_fc, huidig_peilgebied_lyr, "%s = '%s'" % (gpg_field, k))
 
             log.debug("extract polylines within %s" % k)
 
-            huidige_waterlijn_lyr = turtlebase.arcgis.get_random_layer_name()
+            huidige_waterlijn_lyr = "ovk_%s" % counter
             gp.MakeFeatureLayer(intersect_waterlijn, huidige_waterlijn_lyr, "%s = '%s'" % (gpg_field, k))
 
             #count records
@@ -117,7 +119,7 @@ def main():
                 polygon_fc = turtlebase.voronoi.create_merged_polygons(result_dict, workspace_gdb)
 
                 log.info(" - intersect line_voronoi polygons")
-                output_intersect_fc = turtlebase.arcgis.get_random_file_name(workspace_gdb)
+                output_intersect_fc = os.path.join(workspace, "voronoi_work", "voronoi_%s" % counter)
 
                 gp.Intersect_analysis(huidig_peilgebied_lyr + ";" + polygon_fc, output_intersect_fc)
 
@@ -125,7 +127,7 @@ def main():
 
             elif record_count == 1:
                 log.debug(" - 1 watergang in peilgebied, opknippen dus niet nodig, kopieer gpg")
-                output_spatial_join = turtlebase.arcgis.get_random_file_name(workspace_gdb)
+                output_spatial_join = os.path.join(workspace, "voronoi_work", "out_sj_%s" % counter)
 
                 gp.SpatialJoin_analysis(huidig_peilgebied_lyr, huidige_waterlijn_lyr, output_spatial_join)
                 polygon_list.append(output_spatial_join)

@@ -38,34 +38,25 @@ def reading_line_feature_nodes_to_dict_according_to_peilgebied(gp, point_shape, 
     return output_dict
 
 
-def create_point_file_from_dict(gp, centroid_dict, output_centroid_file, peilgebied_id):
-    '''Creeert een punten_shape obv een dictionary met centroides  daarnaast voegt het de peilgebiedid toe aan de file'''
-    output_centroid_filename = os.path.basename(output_centroid_file)
-    workspace_gdb = os.path.dirname(output_centroid_file)
-    log.info("The centroid file %s wordt aangemaakt" % output_centroid_file)
-
-    gp.CreateFeatureClass_management(workspace_gdb, output_centroid_filename, "POINT")
-    gp.Addfield_management(output_centroid_file, peilgebied_id, "TEXT")
-    rows_out = gp.InsertCursor(output_centroid_file)
-    pnt = gp.CreateObject("Point")
-    for peilgebied in centroid_dict:
-        newfeat = rows_out.NewRow()
-        punt = centroid_dict[peilgebied].split(' ')
-        pnt.X = float(punt[0].replace(",", "."))
-        pnt.Y = float(punt[1].replace(",", "."))
-        newfeat.shape = pnt
-        newfeat.SetValue(peilgebied_id, peilgebied)
-        rows_out.InsertRow(newfeat)
-    del rows_out
+def add_xy_coords(gp, fc, xfield, yfield):
+    """add coordinates (midpoints) to level_areas (peilgebieden)
+    """
+    rows = gp.UpdateCursor(fc)
+    for row in nens.gp.gp_iterator(rows):
+        part = row.Shape.GetPart(0)
+        x_list = [float(pnt.x) for pnt in nens.gp.gp_iterator(part)]
+        row.SetValue(xfield, x_list[0])
+        y_list = [float(pnt.y) for pnt in nens.gp.gp_iterator(part)]
+        row.SetValue(yfield, y_list[0])
+        rows.UpdateRow(row)
 
 
-def read_coordinates_from_string(coord_string):
+def read_coordinates_from_string(point):
     ''' the coordinates are in a string as follows: 'x y'
         returns de x en y as floating point
         '''
-    coord_spl = coord_string.split(' ')
-    x = float(coord_spl[0].replace(",", "."))
-    y = float(coord_spl[1].replace(",", "."))
+    x = float(point.X)
+    y = float(point.Y)
     return x, y
 
 
@@ -87,7 +78,8 @@ def calculate_minimal_distance_between_points(peilgebieden_centroides_dict, wate
         if waterlijnen_punten_dict.has_key(peilgebied):
             distance_dict = {}
             for punt_op_waterlijn in waterlijnen_punten_dict[peilgebied].keys():
-                punt_x, punt_y = read_coordinates_from_string(waterlijnen_punten_dict[peilgebied][punt_op_waterlijn])
+                punt_x = waterlijnen_punten_dict[peilgebied][punt_op_waterlijn].X
+                punt_y = waterlijnen_punten_dict[peilgebied][punt_op_waterlijn].Y
                 centroid_x, centroid_y = read_coordinates_from_string(peilgebieden_centroides_dict[peilgebied]['centroid'])
                 #calculate_distance
                 distance = calculate_distance(punt_x, punt_y, centroid_x, centroid_y)
@@ -102,8 +94,14 @@ def calculate_minimal_distance_between_points(peilgebieden_centroides_dict, wate
 
             distance_dict = {}
             for punt_op_waterlijn in waterlijnen_vertex_dict[peilgebied].keys():
-                punt_x, punt_y = read_coordinates_from_string(waterlijnen_vertex_dict[peilgebied][punt_op_waterlijn])
-                centroid_x, centroid_y = read_coordinates_from_string(peilgebieden_centroides_dict[peilgebied]['centroid'])
+                #log.info(waterlijnen_vertex_dict[peilgebied][punt_op_waterlijn])
+                punt_x = float(waterlijnen_vertex_dict[peilgebied][punt_op_waterlijn].X)
+                punt_y = float(waterlijnen_vertex_dict[peilgebied][punt_op_waterlijn].Y)
+                #punt_y = waterlijnen_vertex_dict[peilgebied][punt_op_waterlijn].Y
+                #log.info(peilgebieden_centroides_dict[peilgebied])
+                centroid_x = float(peilgebieden_centroides_dict[peilgebied]['centroid'].X)
+                centroid_y = float(peilgebieden_centroides_dict[peilgebied]['centroid'].Y)
+                #centroid_y = peilgebieden_centroides_dict[peilgebied].Y
                 #calculate_distance
                 distance = calculate_distance(punt_x, punt_y, centroid_x, centroid_y)
                 distance_dict[distance] = punt_op_waterlijn
@@ -116,6 +114,82 @@ def calculate_minimal_distance_between_points(peilgebieden_centroides_dict, wate
             log.warning("Peilgebied " + peilgebied + " heeft geen waterlijn. De centroide wordt als rekenpunt aangemaakt")
             output_dict[peilgebied] = peilgebieden_centroides_dict[peilgebied]['centroid']
     return output_dict
+
+
+def create_nodes(gp, input_lines, nodes, peilgebied_id):
+    """
+    reads a line fc and returns the nodes (point fc)
+    """
+    gp.CreateFeatureClass_management(os.path.dirname(nodes), os.path.basename(nodes), "POINT")
+    gp.Addfield_management(nodes, peilgebied_id, "TEXT")
+
+    in_rows = gp.SearchCursor(input_lines)
+    in_row = in_rows.Next()
+    out_rows = gp.InsertCursor(nodes)
+    pnt = gp.CreateObject("Point")
+
+    inDesc = gp.describe(input_lines)
+    while in_row:
+        ident = in_row.GetValue("OVKIDENT")
+
+        points = {}
+        feat = in_row.GetValue(inDesc.ShapeFieldName)
+
+        lengte = in_row.GetValue("GEOMETRIE_")
+
+        part = feat.getpart(0)
+        pnt_list = [(float(pnt.x), float(pnt.y)) for pnt in nens.gp.gp_iterator(part)]
+
+        XY = calculate_sp(percentage, max_distance, lengte, pnt_list)
+        pnt.X = XY[0]
+        pnt.Y = XY[1]
+
+        out_row = out_rows.newRow()
+        out_row.shape = pnt
+        out_row.setValue("PROIDENT", ident)
+        out_row.setValue("LOCIDENT", "%s_a" % ident)
+        out_rows.insertRow(out_row)
+
+        pnt_list.reverse()
+        XY = calculate_sp(percentage, max_distance, lengte, pnt_list)
+        pnt.X = XY[0]
+        pnt.Y = XY[1]
+
+        out_row = out_rows.newRow()
+        out_row.shape = pnt
+        out_row.setValue("PROIDENT", ident)
+        out_row.setValue("LOCIDENT", "%s_b" % ident)
+        out_rows.insertRow(out_row)
+        in_row = in_rows.Next()
+
+    del out_rows
+    del in_rows
+
+    return nodes
+
+
+def create_point_file_from_dict(gp, centroid_dict, output_centroid_file, peilgebied_id):
+    '''Creeert een punten_shape obv een dictionary met centroides  daarnaast voegt het de peilgebiedid toe aan de file'''
+    output_centroid_filename = os.path.basename(output_centroid_file)
+    workspace_gdb = os.path.dirname(output_centroid_file)
+    log.info("The centroid file %s wordt aangemaakt" % output_centroid_file)
+
+    gp.CreateFeatureClass_management(workspace_gdb, output_centroid_filename, "POINT")
+    gp.Addfield_management(output_centroid_file, peilgebied_id, "TEXT")
+    rows_out = gp.InsertCursor(output_centroid_file)
+    pnt = gp.CreateObject("Point")
+    for peilgebied in centroid_dict:
+        newfeat = rows_out.NewRow()
+        #log.info(centroid_dict[peilgebied])
+        #punt = centroid_dict[peilgebied].X
+        log.info(centroid_dict[peilgebied])
+        pnt.X = centroid_dict[peilgebied].X
+        pnt.Y = centroid_dict[peilgebied].Y
+
+        newfeat.shape = pnt
+        newfeat.SetValue(peilgebied_id, peilgebied)
+        rows_out.InsertRow(newfeat)
+    del rows_out
 
 
 def reading_line_features_nodes(gp, inputFC):
@@ -142,10 +216,10 @@ def reading_line_features_nodes(gp, inputFC):
 ##                if not nodes_dict.has_key(row_id):
 ##                        nodes_dict[row_id] = {}
 ##                nodes_dict[row_id][pnt_count] = str(pnt.x) + " " + str(pnt.y)
-                key_coord = '%.5f' % (pnt.x) + " " + '%.5f' % (pnt.y)
-                if temp_dict.has_key(key_coord):
-                    nodes_dict[key] = key_coord
-                temp_dict[key_coord] = key
+                #key_coord = '%.5f' % (pnt.x) + " " + '%.5f' % (pnt.y)
+                if temp_dict.has_key(pnt):
+                    nodes_dict[key] = pnt
+                temp_dict[pnt] = key
 
                 pnt = part.next()
                 pnt_count += 1
@@ -182,7 +256,7 @@ def reading_line_features_vertices(gp, inputFC, field_peilgebied_id, peilgebiede
                 while pnt:
                     if not vertex_dict.has_key(peilgebied_shapefile):
                         vertex_dict[peilgebied_shapefile] = {}
-                    vertex_dict[peilgebied_shapefile][pnt_count] = str(pnt.x) + " " + str(pnt.y)
+                    vertex_dict[peilgebied_shapefile][pnt_count] = pnt
                     pnt = part.next()
                     pnt_count += 1
 

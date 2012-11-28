@@ -11,6 +11,8 @@ from turtlebase import mainutils
 import nens.gp
 import turtlebase.arcgis
 import turtlebase.spatial
+import arcpy
+import numpy
 import turtlebase.general
 
 log = logging.getLogger(__name__)
@@ -125,16 +127,16 @@ def main():
                       input_level_area_fc)
             geometry_check_list.append(input_level_area_fc + " -> (Polygon)")
 
-        if gp.describe(input_ahn_raster).PixelType[0] not in ['U', 'S']:
-            log.error("Input AHN is a floating point raster, \
-                    for this script an integer is necessary")
-            geometry_check_list.append(input_ahn_raster + " -> (Integer)")
+        if gp.describe(input_ahn_raster).PixelType[0] not in ['F']:
+            log.info(gp.describe(input_ahn_raster).PixelType)
+            log.error("Input AHN is an integer raster, \
+                    for this script a float is necessary")
+            geometry_check_list.append(input_ahn_raster + " -> (Float)")
 
         if len(geometry_check_list) > 0:
             log.error("check input: %s" % geometry_check_list)
             sys.exit(2)
-        else:
-            print "A"
+
         #---------------------------------------------------------------------
         # Check required fields in input data
         log.info("Check required fields in input data")
@@ -172,85 +174,57 @@ def main():
         #---------------------------------------------------------------------
         # Environments
         log.info("Set environments")
-        temp_level_area = os.path.join(workspace_gdb, "peilgebieden")
-        gp.select_analysis(input_level_area_fc, temp_level_area)
+        #temp_level_area = os.path.join(workspace_gdb, "peilgebieden")
+        #gp.select_analysis(input_level_area_fc, temp_level_area)
         # use extent from level area
-        gp.extent = gp.describe(temp_level_area).extent
+        #gp.extent = gp.describe(temp_level_area).extent
 
         #---------------------------------------------------------------------
+        rows = arcpy.SearchCursor(input_level_area_table)
+        surface_level = {}
+        for row in rows:
+            gpg_id = row.GPGIDENT
+            streefpeil = row.ZOMERPEIL
+            surface_level[gpg_id] = streefpeil
+
         # create ahn ascii
-        log.info("Create ascii from ahn")
-
-        ahn_ascii = turtlebase.arcgis.get_random_file_name(workspace, ".asc")
-        log.debug("ahn ascii: %s" % ahn_ascii)
-        gp.RasterToASCII_conversion(input_ahn_raster, ahn_ascii)
-
-        #---------------------------------------------------------------------
-        # Add ID Int to level area
-        log.info("Create level area ascii")
-        area_id_dict = add_integer_ident(gp, temp_level_area, config.get(
-                    'maaiveldkarakteristiek', 'id_int').lower(),
-                                         config.get('maaiveldkarakteristiek',
-                                                    'input_peilgebied_ident'))
-
-        out_raster_dataset = turtlebase.arcgis.get_random_file_name(
-                                                        workspace_gdb)
-        gp.FeatureToRaster_conversion(temp_level_area, config.get(
-            'maaiveldkarakteristiek', 'id_int'), out_raster_dataset, cellsize)
-
-        id_int_ascii = turtlebase.arcgis.get_random_file_name(
-                            workspace, ".asc")
-        log.debug("id_int_ascii: %s" % id_int_ascii)
-        gp.RasterToASCII_conversion(out_raster_dataset, id_int_ascii)
-
-        #---------------------------------------------------------------------
-        log.info("Read targetlevel table")
-        area_level_dict = nens.gp.get_table(
-                            gp, input_level_area_table, primary_key=config.get(
-                                'maaiveldkarakteristiek',
-                                'input_peilgebied_ident').lower())
-        target_level_dict = {}
-
-        for k, v in area_level_dict.items():
-            if k in area_id_dict:
-                id_int = area_id_dict[k][config.get('maaiveldkarakteristiek',
-                                                    'id_int').lower()]
-                target_level_dict[id_int] = {
-                            'targetlevel': v[config.get(
-                            'maaiveldkarakteristiek',
-                            'field_streefpeil').lower()],
-                            'gpgident': k,
-                                             }
-        #---------------------------------------------------------------------
-        log.info("create S-Curve")
+        log.info("Create array from ahn")
         mv_procent_str = config.get('maaiveldkarakteristiek', 'mv_procent')
         field_range = mv_procent_str.split(', ')
-        #scurve_dict = turtlebase.spatial.create_scurve(ahn_ascii,
-        # id_int_ascii, target_level_dict, field_range)
-        scurve_dict = turtlebase.spatial.surface_level_statistics(
-                            ahn_ascii, id_int_ascii,
-                            target_level_dict, field_range)
-        #---------------------------------------------------------------------
-        log.info("Create output table")
-        create_output_table(gp, output_surface_table, config.get(
-            'maaiveldkarakteristiek', 'input_peilgebied_ident'), field_range)
-        #---------------------------------------------------------------------
-        # Add metadata
-        import time
-        date_time_str = time.strftime("%d %B %Y %H:%M:%S")
-        source = input_ahn_raster
 
-        for k, v in scurve_dict.items():
-            scurve_dict[k]['date_time'] = date_time_str
-            scurve_dict[k]['source'] = source
+        shapeName = arcpy.Describe(input_level_area_fc).shapeFieldName
+        in_rows = arcpy.SearchCursor(input_level_area_fc)
+        out_rows = arcpy.InsertCursor(output_surface_table)
+        for in_row in in_rows:
+            gpg_id = in_row.GPGIDENT
+            log.info("calculate s-curve for %s" % gpg_id)
+            streefpeil = float(surface_level[gpg_id])
+            peilgebied = in_row.getValue(shapeName)
+            ahn_temp = turtlebase.arcgis.get_random_file_name(workspace)
+            arcpy.env.pyramid = "NONE"
+            arcpy.Clip_management(input_ahn_raster, "#", ahn_temp, peilgebied, "#", "ClippingGeometry")
 
-        #---------------------------------------------------------------------
-        # Write results to output table
-        log.info("Write results to output table")
-        turtlebase.arcgis.write_result_to_output(
-                            output_surface_table, config.get(
-                                'maaiveldkarakteristiek',
-                                'input_peilgebied_ident').lower(), scurve_dict)
+            myArray = arcpy.RasterToNumPyArray(ahn_temp)
+            masked_array = myArray[myArray > -9999]
+            total_cells = len(masked_array)
+            boven_streefpeil = masked_array[masked_array > streefpeil]
+            beneden_streefpeil = masked_array[masked_array < streefpeil]
+            out_row = out_rows.newRow()
+            out_row.setValue("GPGIDENT", gpg_id)
+            if total_cells > 0:
+                procent_beneden_mv = (len(beneden_streefpeil) / total_cells) * 100
+                out_row.setValue("MV_Opm", "%s procent beneden streefpeil" % procent_beneden_mv)
+            if len(boven_streefpeil) > 0:
+                for p in field_range:
+                    percentage = numpy.percentile(boven_streefpeil, float(p))
+                    #log.info("percentage (%s): %s" % (p, percentage))
+                    out_row.setValue("MV_HGT_%s" % int(p), float(percentage))
+
+            out_rows.insertRow(out_row)
+
+            del myArray
+            del boven_streefpeil
+            del beneden_streefpeil
 
         #---------------------------------------------------------------------
         # Delete temporary workspace geodatabase & ascii files
