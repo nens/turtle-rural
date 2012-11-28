@@ -263,7 +263,6 @@ def create_dict_fields(duikers):
         break
      
     return fieldmapping
-      #  dict_fields = 
         
 def valid_value(value):
     '''
@@ -308,7 +307,7 @@ def addfieldnames(gp, output_filename, dict_fields):
     '''
     Adds fields to a feature class
     '''    
-    for fieldname, type in dict_fields.iteritems():
+    for fieldname in dict_fields:
         if turtlebase.arcgis.is_fieldname(gp, output_filename, fieldname) == True:
             continue
             
@@ -350,7 +349,7 @@ def main():
         
         # wordt globaal al geladen. maar werkt niet (?)
         
-        import nens.gp
+        
         #---------------------------------------------------------------------
         # Create workspace
         workspace = config.get('GENERAL', 'location_temp')
