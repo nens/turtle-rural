@@ -310,8 +310,9 @@ def addfieldnames(gp, output_filename, dict_fields):
     for fieldname in dict_fields:
         if turtlebase.arcgis.is_fieldname(gp, output_filename, fieldname) == True:
             continue
-            
-        gp.AddField_management(output_filename, fieldname, type)
+       
+        
+        gp.AddField_management(output_filename, fieldname, dict_fields[fieldname])
 
 def add_dict_values_to_fc(gp, fc, fieldname_ident, dict_attribs, nodatavalue):
     '''
@@ -398,7 +399,7 @@ def main():
         #legger
         bodemhoogte_benedenstrooms = config.get("controle_kunstwerken", "bodemhoogte_benedenstrooms").lower()
         bodemhoogte_bovenstrooms = config.get("controle_kunstwerken", "bodemhoogte_bovenstrooms").lower()
-        bodem_hoogte_berekend = config.get("controle_kunstwerken", "bodem_hoogte_berekend").lower()
+#        bodem_hoogte_berekend = config.get("controle_kunstwerken", "bodem_hoogte_berekend").lower()
         lengte_waterloop = config.get("controle_kunstwerken", "lengte_waterloop").lower()
         output_field_verhang_bodem = config.get("controle_kunstwerken", "output_field_verhang_bodem").lower()
         #peilgebieden
