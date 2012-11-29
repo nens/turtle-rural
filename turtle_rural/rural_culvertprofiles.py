@@ -158,8 +158,8 @@ def main(options=None, args=None):
         out.close()
 
     location_svg = output_graphs + "\\*.svg"
-    log.info('..\\batik\\convert_svg_to_png.bat %s' % location_svg)
-    os.system('..\\batik\\convert_svg_to_png.bat %s' % location_svg)
+    log.info('.\\batik\\convert_svg_to_png.bat %s' % location_svg)
+    os.system('.\\batik\\convert_svg_to_png.bat %s' % location_svg)
 
     # Create CSV files
     output_csv = os.path.join(output_dir, "csv")
