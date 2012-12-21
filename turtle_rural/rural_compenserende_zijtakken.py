@@ -53,12 +53,25 @@ def calculate_xy(gp, input_fc, ident):
     row = gp.SearchCursor(input_fc)
     for item in nens.gp.gp_iterator(row):
         key = item.getValue(ident)
-        punt = item.shape.centroid
+        punt = item.shape.getpart(0)
         if not output_xy.has_key(key):
             output_xy[key] = (punt.X, punt.Y)
             
     return output_xy
         
+        
+def calculate_xy_and_ident(gp, input_fc, ident_new, ident):
+    output_xy = {}
+    row = gp.SearchCursor(input_fc)
+    for item in nens.gp.gp_iterator(row):
+        key_new = item.getValue(ident_new)
+        key = item.getValue(ident)
+        punt = item.shape.getpart(0)
+        if not output_xy.has_key(key_new):
+            output_xy[key_new] = {"xy": (punt.X, punt.Y), "zt_ident": key}
+            
+    return output_xy
+    
         
 def add_unique_id(gp, input_fc, ident_new):
     """
@@ -179,42 +192,71 @@ def main():
         - teken koppelpunten
         """
         afvoerpunten_xy = calculate_xy(gp, afvoerpunten, gpgident)              
-        
-        create_dict_stars_around_rekenpunten(gp, afvoerpunten_xy, config, output_bergingstakken)
+        tmp_bergingstakken = os.path.join(workspace_gdb, "bergingstak_totaal")
+        create_dict_stars_around_rekenpunten(gp, afvoerpunten_xy, config, tmp_bergingstakken)
         intersect = os.path.join(workspace_gdb, "intersect")
-        gp.Intersect_analysis(output_bergingstakken + ";" + waterlijnen, intersect, "#", "#", "POINT")
+        gp.Intersect_analysis(tmp_bergingstakken + ";" + waterlijnen, intersect, "#", "#", "POINT")
+        intersect_sp = os.path.join(workspace_gdb, "intersect_sp")
+        gp.MultipartToSinglepart_management(intersect, intersect_sp)
         
-        add_unique_id(gp, intersect, "IDENT_NEW")
-        intersect_xy = calculate_xy(gp, intersect, "IDENT_NEW")
+        add_unique_id(gp, intersect_sp, "IDENT_NEW")
+        intersect_xy = calculate_xy_and_ident(gp, intersect_sp, "IDENT_NEW", "IDENT")
         
-        log.info(len(intersect_xy))
-        for ident, xy in intersect_xy.items():
-            for afvoer_xy in afvoerpunten_xy.values():
-                if (round(float(xy[0]), 1), round(float(xy[1]), 1)) == (round(float(afvoer_xy[0]), 1), round(float(afvoer_xy[1]), 1)):
-                    
+        for afvoer_xy in afvoerpunten_xy.values():
+            for ident, v in intersect_xy.items():            
+                if (round(float(v['xy'][0]), 1), round(float(v['xy'][1]), 1)) == (round(float(afvoer_xy[0]), 1), round(float(afvoer_xy[1]), 1)):
                     del(intersect_xy[ident])
-        log.info(len(intersect_xy))
-        pnts = intersect = os.path.join(workspace_gdb, "points")
-        gp.CreateFeatureClass_management(os.path.dirname(pnts), 
-                                     os.path.basename(pnts), "POINT")
-        point = gp.CreateObject("POINT")
-        rows = gp.InsertCursor(pnts)
+                
+        zijtakken_intersect = []
         for v in intersect_xy.values():
-            point.x, point.y = v
-            
-            feat = rows.NewRow()
-            feat.Shape = point
-            rows.InsertRow(feat)
+            zijtakken_intersect.append(v['zt_ident'])
         
+        buitenpunten = os.path.join(workspace_gdb, "buitenpunten")
+        gp.CreateFeatureClass_management(os.path.dirname(buitenpunten), 
+                                     os.path.basename(buitenpunten), "POINT")
         
-        #log.info(intersect_xy)
-        #spatial_join = os.path.join(workspace_gdb, "spatial_join")
-        #gp.SpatialJoin_analysis(intersect,afvoerpunten,spatial_join,"JOIN_ONE_TO_ONE",
-        #                        "KEEP_ALL","#","CLOSEST","100","DISTANCE")
+        point = gp.CreateObject("POINT")
+        gp.AddField(buitenpunten, "IDENT", "TEXT")
+        
+        rows = gp.InsertCursor(buitenpunten)
+        count = 1
+        length = int(config.get('bergingstakken', 'length_of_breach'))
+        aantal_takken = int(config.get('bergingstakken', 'numb_of_lines_opt_breach'))
+        for peilgebiedid, xy in afvoerpunten_xy.items():
+            xcoord, ycoord = xy
+            for i in range(aantal_takken):
+                ident = peilgebiedid + "_%s" % i
+                if ident not in zijtakken_intersect:    
+                    alpha = float(i) / aantal_takken * 2 * math.pi
+                    dX = length * math.sin(alpha)
+                    point.x = float(xcoord) + float(dX)
+                    dY = length * math.cos(alpha)            
+                    point.y = float(ycoord) + float(dY)
+                    count = count + 1
+                    
+                    feat = rows.NewRow()
+                    feat.SetValue("IDENT", peilgebiedid + "_%s" % i)
+                    feat.Shape = point
+                    rows.InsertRow(feat)
+               
+        output_sj = os.path.join(workspace_gdb, "buitenpunten_distance")  
+        gp.SpatialJoin_analysis(output_bergingstakken,waterlijnen,output_sj,"JOIN_ONE_TO_ONE","KEEP_ALL","#","CLOSEST","#","DISTANCE")
+
+        
+
+
+
+
+
+
+
+
+
+
         
 
         #---------------------------------------------------------------------
-        # Delete temporary workspace geodatabase & ascii files
+        # Delete temporary workspace geodatabase files
         try:
             log.debug("delete temporary workspace: %s" % workspace_gdb)
             #gp.delete(workspace_gdb)

@@ -11,7 +11,6 @@ from turtlebase import mainutils
 import nens.gp
 import turtlebase.arcgis
 import turtlebase.network
-import turtlebase.general
 
 log = logging.getLogger(__name__)
 
@@ -35,7 +34,6 @@ def create_point_file_from_polyline(gp, config, file_with_xy_points, output_file
     col_from_y = config.get('netwerkanalyse', 'from_y')
     col_to_x = config.get('netwerkanalyse', 'to_x')
     col_to_y = config.get('netwerkanalyse', 'to_y')
-
 
     rows_in = gp.SearchCursor(file_with_xy_points)
     row_in = rows_in.Next()
@@ -106,6 +104,29 @@ def update_to_and_from_coordinates(gp, fc, ident):
 
     turtlebase.arcgis.write_result_to_output(fc, ident, coordinates_dict)
 
+
+def read_table(gp, config, input_fc, col_area):
+    """
+    """
+    result = {}
+    
+    col_from_x = config.get('netwerkanalyse', 'from_x')
+    col_from_y = config.get('netwerkanalyse', 'from_y')
+    col_to_x = config.get('netwerkanalyse', 'to_x')
+    col_to_y = config.get('netwerkanalyse', 'to_y')
+    col_ovkident = config.get('general', 'ovkident')
+    
+    row = gp.SearchCursor(input_fc)
+    for item in nens.gp.gp_iterator(row):
+        result[item.GetValue(col_ovkident)] = {col_from_x: item.GetValue(col_from_x),
+                                               col_from_y: item.GetValue(col_from_y),
+                                               col_to_x: item.GetValue(col_to_x),
+                                               col_to_y: item.GetValue(col_to_y),
+                                               col_area: item.GetValue(col_area)}
+        
+    return result
+    
+        
 def main():
     try:
         gp = mainutils.create_geoprocessor()
@@ -133,13 +154,14 @@ def main():
         nodig voor deze tool:
         """
         tempfiles = []
-        if len(sys.argv) == 5:
+        if len(sys.argv) == 6:
             input_hydrovak = sys.argv[1]
-            output_shapefile = sys.argv[2]
-            optional_bottleneck_points = sys.argv[3]
-            optional_terminal_points = sys.argv[4]
+            optional_area = sys.argv[2]
+            output_shapefile = sys.argv[3]
+            optional_bottleneck_points = sys.argv[4]
+            optional_terminal_points = sys.argv[5]            
         else:
-            log.warning("usage: <input_hydrovak> <output_shapefile> <optional_bottleneck_points> <optional_terminal_points>")
+            log.warning("usage: <input_hydrovak> <output_shapefile> <optional_bottleneck_points> <optional_terminal_points> <optional_area>")
             sys.exit(1)
 
         tolerance_points = float(config.get('netwerkanalyse', 'tolerance_points'))
@@ -150,43 +172,26 @@ def main():
         #---------------------------------------------------------------------
         # Check required fields in input data
         ovk_field = config.get('general', 'ovkident')
-        missing_fields = []
-        check_fields = {input_shapefile: ['Sum_OPP_LA', 'Sum_OPP_ST',
-                        'from_x', 'from_y', 'to_x', 'to_y']}
 
         if not turtlebase.arcgis.is_fieldname(gp, input_shapefile, "ovkident"):
             errormsg = "fieldname %s not available in %s" % (
                                     "ovkident", input_shapefile)
             log.error(errormsg)
-            missing_fields.append(errormsg)
-
-        for input_fc, fieldnames in check_fields.items():
-            for fieldname in fieldnames:
-                if not turtlebase.arcgis.is_fieldname(
-                        gp, input_fc, fieldname):
-                    gp.AddField_management(input_fc, fieldname, "Double")
-
-        if len(missing_fields) > 0:
-            log.error("missing fields in input data: %s" % missing_fields)
-            sys.exit(2)
         #---------------------------------------------------------------------
         # add from and to coordinates
-        update_to_and_from_coordinates(gp, input_shapefile, 'ovkident')
+        update_to_and_from_coordinates(gp, input_shapefile, ovk_field)
 
-        dbf_name = turtlebase.arcgis.get_random_file_name(workspace , ".dbf")
-        tempfiles.append(dbf_name)
-        gp.select_analysis(input_shapefile, dbf_name)
-
-        g = turtlebase.network.import_dbf_into_graph(config, dbf_name, tolerance_points)
+        network_data = read_table(gp, config, input_shapefile, optional_area)
+        
+        g = turtlebase.network.import_dbf_into_graph(config, network_data,
+                                                     tolerance_points, optional_area)
         turtlebase.network.let_it_stream(g)
 
         #create output:
         fields_to_add = [('incoming', 'SHORT'),
                          ('examined', 'SHORT'),
                          ('terminal', 'SHORT'),
-                         ('som_sted', 'DOUBLE'),
-                         ('som_land', 'DOUBLE'),
-                         ('som_totaal', 'DOUBLE'),
+                         ('som_oppvl', 'DOUBLE'),
                          ('bottleneck', 'SHORT'),
                          ('flip', 'SHORT')]
         gp.select_analysis(input_shapefile, output_shapefile)

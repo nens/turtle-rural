@@ -27,7 +27,6 @@
 
 from nens.gp import parse_arguments
 import os
-import csv
 import sys
 import logging
 import nens.gp

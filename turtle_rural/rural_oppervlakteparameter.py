@@ -11,12 +11,75 @@ from turtlebase.logutils import LoggingConfig
 from turtlebase import mainutils
 import nens.gp
 import turtlebase.arcgis
-import turtlebase.filenames
-import turtlebase.general
 
 log = logging.getLogger(__name__)
 
-def conv_ha(conversion, lgn_id, ha):
+
+def write_result_to_output(gp, output_table, output_ident, result_dict):
+    """replace existing data in output_table
+    """
+    log.info("Updating existing records...")
+    update_count, update_progress = update_records(
+        gp, output_table, output_ident, result_dict)
+    log.info(" - " + str(update_count) + " records have been updated")
+    update_count = 0
+
+    #put new data in output_table
+    log.info("Inserting new records...")
+    insert_count, update_progress = insert_records(
+        gp, output_table, result_dict, update_progress)
+    
+    del update_progress
+    log.info(" - " + str(insert_count) + " records have been inserted")
+    insert_count = 0
+
+
+def update_records(gp, table_name, field_name_id, data, update_progress={}):
+    """data: {'1': {'field_name1': 'value1', 'fieldname2': 'value2'}, '2':
+    {'field_name3': 'value3', 'fieldname4': 'value4'}} update_progress:
+    dictionary that keeps count of the data being inserted {'1': 1, '2': 1}
+    use try: except: construction when using this function
+    """
+    update_count = 0
+    rows = gp.UpdateCursor(table_name)
+    for row in nens.gp.gp_iterator(rows):
+        ident = row.GetValue(field_name_id)
+        #one row of data
+        if str(ident) in data:
+            for field_name, value in data[str(ident)].items():
+                if value is not None:
+                    row.SetValue(field_name, value)
+            update_progress[str(ident)] = 1
+            update_count = update_count + 1
+            rows.UpdateRow(row)
+
+    return update_count, update_progress
+
+
+def insert_records(gp, table_name, data, update_progress={}):
+    """data: {'1': {'field_name1': 'value1', 'fieldname2': 'value2'}, '2':
+    {'field_name3': 'value3', 'fieldname4': 'value4'}} update_progress:
+    dictionary that keeps count of the data being inserted {'1': 1, '2': 1}
+    use try: except: construction when using this function
+    """
+    update_count = 0
+    nsertCursor = gp.InsertCursor(table_name)
+
+    for key, dict_items in data.items():
+        if str(key) not in update_progress:
+            #new row
+            newRow = nsertCursor.NewRow()
+            for field_name, value in dict_items.items():
+                if value is not None:
+                    newRow.SetValue(field_name, value)
+
+            nsertCursor.InsertRow(newRow)
+            update_count = update_count + 1
+            update_progress[str(key)] = 1
+    return update_count, update_progress
+
+
+def conv_ha(conversion, lgn_id, ha, gewastype):
     '''
     converts lgn_id+area using conversion
     input:
@@ -29,9 +92,12 @@ def conv_ha(conversion, lgn_id, ha):
         verhard = ha * float(conversion[lgn_id]['verhard_ha'])
         onvsted = ha * float(conversion[lgn_id]['onvsted_ha'])
         kassen = ha * float(conversion[lgn_id]['kassen_ha'])
-        gras = ha * float(conversion[lgn_id]['gras_ha'])
-        natuur = ha * float(conversion[lgn_id]['natuur_ha'])
+        onvland = ha * float(conversion[lgn_id]['onvland_ha'])
         openwat = ha * float(conversion[lgn_id]['openwat_ha'])
+        if gewastype == 7:
+            gewastype_ha = onvsted
+        else:
+            gewastype_ha = onvland
         hectares = ha
         error = False
     else:
@@ -39,18 +105,16 @@ def conv_ha(conversion, lgn_id, ha):
         verhard = 0
         onvsted = 0
         kassen = 0
-        gras = 0
-        natuur = 0
+        onvland = 0
         openwat = 0
         hectares = 0
         error = True
     return {'VERHRD_LGN': verhard,
             'ONVSTD_LGN': onvsted,
             'KASSEN_LGN': kassen,
-            'GRAS_LGN': gras,
-            'NATUUR_LGN': natuur,
+            'ONVLND_LGN': onvland,
             'OPENWT_LGN': openwat,
-            'HECTARES': hectares}, error
+            'HECTARES': hectares}, gewastype_ha, error
 
 
 def main():
@@ -75,12 +139,13 @@ def main():
         #----------------------------------------------------------------------------------------
         #get argv
         log.info("Getting command parameters... ")
-        if len(sys.argv) == 6:
+        if len(sys.argv) == 7:
             input_peilgebieden_feature = sys.argv[1] #from HydroBase
             input_lgn = sys.argv[2]
             input_conversiontable_dbf = sys.argv[3]
             input_watershape = sys.argv[4]
             output_table = sys.argv[5] #RR_oppervlak in HydroBase
+            output_crop_table = sys.argv[6]
         else:
             log.error("Arguments: <LGN raster> <peilgebied HydroBase-table> <conversiontable dbf> <output HydroBase-table>")
             sys.exit(1)
@@ -91,7 +156,7 @@ def main():
         geometry_check_list = []
 
         lgn_desc = gp.describe(input_lgn)
-        if lgn_desc.DataType == 'RasterDataset':
+        if lgn_desc.DataType == 'RasterDataset' or lgn_desc.DataType == 'RasterLayer':
             if lgn_desc.PixelType[0] not in ["S", "U"]:
                 errormsg = "input %s is not an integer raster!" % input_lgn
                 log.error(errormsg)
@@ -112,7 +177,7 @@ def main():
                 temp_lgn_fc = turtlebase.arcgis.get_random_file_name(workspace_gdb)
                 gp.Select_analysis(input_lgn, temp_lgn_fc)
         else:
-            log.error("cannot recognize datatype of LGN, must be a fc, shapefile or a raster dataset")
+            log.error("datatype of LGN is %s , must be a ShapeFile, FeatureClass, RasterDataset or RasterLayer" % lgn_desc.DataType)
             sys.exit(5)
 
         if not(gp.exists(input_peilgebieden_feature)):
@@ -142,7 +207,7 @@ def main():
             missing_fields.append("%s: %s" % (input_peilgebieden_feature, gpgident))
 
         lgn_id = config.get('OppervlakteParameters', 'input_field_lgncode')
-        conversion_fields = [lgn_id, "verhard_ha", "onvsted_ha", "kassen_ha", "gras_ha", "natuur_ha", "openwat_ha"]
+        conversion_fields = [lgn_id, "verhard_ha", "onvsted_ha", "kassen_ha", "onvland_ha", "openwat_ha"]
         for conversion_field in conversion_fields:
             if not turtlebase.arcgis.is_fieldname(gp, input_conversiontable_dbf, conversion_field):
                 log.debug(" - missing: %s in %s" % (conversion_field, input_conversiontable_dbf))
@@ -169,7 +234,6 @@ def main():
 
         # 3b) calculate areas for lgn_id
         log.info("C-2) Calculate areas for tempfile_LGN_peilgebied using conversiontable")
-
         #read gpgident from file
         lgn_fieldnames = nens.gp.get_table_def(gp, temp_lgn_fc)
         if "gridcode" in lgn_fieldnames:
@@ -179,7 +243,25 @@ def main():
         else:
             log.error("Cannot find 'grid_code' or 'gridcode' field in input lgn file")
 
+        gewastypen = {1: config.get('OppervlakteParameters', 'grass_area'),
+                      2: config.get('OppervlakteParameters', 'corn_area'),
+                      3: config.get('OppervlakteParameters', 'potatoes_area'),
+                      4: config.get('OppervlakteParameters', 'sugarbeet_area'),
+                      5: config.get('OppervlakteParameters', 'grain_area'),
+                      6: config.get('OppervlakteParameters', 'miscellaneous_area'),
+                      7: config.get('OppervlakteParameters', 'nonarable_land_area'),
+                      8: config.get('OppervlakteParameters', 'greenhouse_area'),
+                      9: config.get('OppervlakteParameters', 'orchard_area'),
+                      10: config.get('OppervlakteParameters', 'bulbous_plants_area'),
+                      11: config.get('OppervlakteParameters', 'foliage_forest_area'),
+                      12: config.get('OppervlakteParameters', 'pine_forest_area'),
+                      13: config.get('OppervlakteParameters', 'nature_area'),
+                      14: config.get('OppervlakteParameters', 'fallow_area'),
+                      15: config.get('OppervlakteParameters', 'vegetables_area'),
+                      16: config.get('OppervlakteParameters', 'flowers_area'),
+                      }
         output_with_area = {}
+        output_gewas_areas = {}
         unknown_lgn_codes = {}
         source_str = "lgn:" + os.path.basename(input_lgn) + " pg:" + os.path.basename(input_peilgebieden_feature)
         if len(source_str) > 50:
@@ -193,23 +275,32 @@ def main():
             value_gridcode = row.GetValue(gridcode)
             value_lgn_id = int(value_gridcode)
             value_peilgeb_area = float(row.shape.Area) / 10000 #Area is in m2
+            gewastype = conversion[value_lgn_id]['gewastype']
             #add to area
             if output_with_area.has_key(value_gpgident):
-                add_to_area, error = conv_ha(conversion, value_lgn_id, float(value_peilgeb_area))
-                for key, value in add_to_area.items(): #all relevant keys
+                add_to_area, gewastype_ha, error = conv_ha(conversion, value_lgn_id, float(value_peilgeb_area), gewastype)
+                for key in add_to_area.keys(): #all relevant keys
                     output_with_area[value_gpgident][key] = float(output_with_area[value_gpgident][key]) + float(add_to_area[key])
             else:
-                output_with_area[value_gpgident], error = conv_ha(conversion, value_lgn_id, float(value_peilgeb_area))
+                output_with_area[value_gpgident], gewastype_ha, error = conv_ha(conversion, value_lgn_id, float(value_peilgeb_area), gewastype)
                 output_with_area[value_gpgident][gpgident] = value_gpgident #set GPGIDENT
                 if error and not(unknown_lgn_codes.has_key(value_lgn_id)):
                     log.warning(" - Warning: lgncode " + str(value_lgn_id) + " not known (check conversiontable)")
                     unknown_lgn_codes[value_lgn_id] = 1
+            
+            if gewastype != 0:
+                if value_gpgident not in output_gewas_areas:
+                    output_gewas_areas[value_gpgident] = {gpgident: value_gpgident}
+                    for key in gewastypen.keys():
+                        output_gewas_areas[value_gpgident][gewastypen[key]] = 0
+                    
+                output_gewas_areas[value_gpgident][gewastypen[gewastype]] += gewastype_ha
+                
             output_with_area[value_gpgident]['LGN_SOURCE'] = source_str
             output_with_area[value_gpgident]['LGN_DATE'] = date_str
             calc_count = calc_count + 1
             if calc_count % 100 == 0:
                 log.info("Calculating field nr " + str(calc_count))
-
         #----------------------------------------------------------------------------------------
         if input_watershape != "#":
             log.info("C-3) Calculate open water from watershape")
@@ -236,7 +327,7 @@ def main():
                     #create new key with area
                     watershape_areas[peilgebied_id] = {'area': water_area_ha}
             #update outputtable
-            for peilgebied_id, values in output_with_area.items():
+            for peilgebied_id in output_with_area.keys():
                 if watershape_areas.has_key(peilgebied_id):
                     output_with_area[peilgebied_id]['OPNWT_GBKN'] = watershape_areas[peilgebied_id]['area']
                     output_with_area[peilgebied_id]['GBKN_DATE'] = date_str
@@ -247,13 +338,11 @@ def main():
         log.info("D) Saving results... ")
 
         #definition of fields
-        areaFields = {}
         areaFields = {gpgident: {'type': 'TEXT', 'length': '30'},
                       'VERHRD_LGN':{'type': 'DOUBLE'},
                       'ONVSTD_LGN':{'type': 'DOUBLE'},
                       'KASSEN_LGN':{'type': 'DOUBLE'},
-                      'GRAS_LGN':{'type': 'DOUBLE'},
-                      'NATUUR_LGN':{'type': 'DOUBLE'},
+                      'ONVLND_LGN':{'type': 'DOUBLE'},
                       'OPENWT_LGN':{'type': 'DOUBLE'},
                       'HECTARES':{'type': 'DOUBLE'},
                       'OPNWT_GBKN':{'type': 'DOUBLE'},
@@ -283,8 +372,58 @@ def main():
                     gp.AddField(output_table, field_name, field_settings['type'])
 
         #----------------------------------------------------------------------------------------
+        #log.info(output_with_area)
         turtlebase.arcgis.write_result_to_output(output_table, gpgident.lower(), output_with_area)
 
+        #----------------------------------------------------------------------------------------
+        # 5) Calculate crop areas
+        if output_crop_table != "#":
+            
+            
+            log.info("E) Calculate crop areas... ")
+            
+            #definition of fields
+            cropFields = {gpgident: {'type': 'TEXT', 'length': '30'},
+                          'GRAS_HA':{'type': 'DOUBLE'},
+                          'MAIS_HA':{'type': 'DOUBLE'},
+                          'AARDAPL_HA':{'type': 'DOUBLE'},
+                          'BIET_HA':{'type': 'DOUBLE'},
+                          'GRAAN_HA':{'type': 'DOUBLE'},
+                          'OVERIG_HA':{'type': 'DOUBLE'},
+                          'NIETAGR_HA':{'type': 'DOUBLE'},
+                          'GLAST_HA':{'type': 'DOUBLE'},
+                          'BOOMGRD_HA':{'type': 'DOUBLE'},
+                          'BOLLEN_HA':{'type': 'DOUBLE'},
+                          'LOOFBOS_HA':{'type': 'DOUBLE'},
+                          'NLDBOS_HA':{'type': 'DOUBLE'},
+                          'NATUUR_HA':{'type': 'DOUBLE'},
+                          'BRAAK_HA':{'type': 'DOUBLE'},
+                          'GROENTN_HA':{'type': 'DOUBLE'},
+                          'BLOEMEN_HA':{'type': 'DOUBLE'}}
+
+            #check if output_table exists. if not, create with correct rows
+            log.info("Checking table...")
+            if not(gp.exists(output_crop_table)):
+                try:
+                    gp.CreateTable(os.path.dirname(output_crop_table), os.path.basename(output_crop_table))
+                except Exception, e:
+                    log.error("Error: creating table " + output_crop_table)
+                    log.debug(e)
+                    sys.exit(14)
+            
+            #check if output_table has the correct rows
+            log.info("Checking fields...")
+            for field_name, field_settings in cropFields.items():
+                if field_settings.has_key('length'):
+                    if not turtlebase.arcgis.is_fieldname(gp, output_crop_table, field_name):
+                        gp.AddField(output_crop_table, field_name, field_settings['type'], '#', '#', field_settings['length'])
+                else:
+                    if not turtlebase.arcgis.is_fieldname(gp, output_crop_table, field_name):
+                        gp.AddField(output_crop_table, field_name, field_settings['type'])
+                        
+
+            log.info(output_gewas_areas)
+            write_result_to_output(gp, output_crop_table, gpgident.lower(), output_gewas_areas)
         #----------------------------------------------------------------------------------------
         # Delete temporary workspace geodatabase & ascii files
         try:

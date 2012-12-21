@@ -10,10 +10,8 @@ from turtlebase.logutils import LoggingConfig
 from turtlebase import mainutils
 import nens.gp
 import turtlebase.arcgis
-import turtlebase.spatial
 import arcpy
 import numpy
-import turtlebase.general
 
 log = logging.getLogger(__name__)
 
@@ -116,8 +114,6 @@ def main():
 
         #---------------------------------------------------------------------
         # Check geometry input parameters
-        cellsize = gp.describe(input_ahn_raster).MeanCellHeight
-
         log.info("Check geometry of input parameters")
         geometry_check_list = []
 

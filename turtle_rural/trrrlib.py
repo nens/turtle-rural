@@ -327,7 +327,7 @@ import nens.gp
 required_fields = {
     'peilgebied': ['id', 'ycoord', 'xcoord', 'total_area',
                    'verhard_area', 'OnverhardSted_area', 'kas_area',
-                   'grass_area', 'openwater_area', ],
+                   'OnverhardLand_area', 'openwater_area', ],
     'kunstwerk': ['id', ],
     }
 
@@ -565,7 +565,7 @@ class Onverhard(SobekNode):
     def write(self, pool):
         "writes the object to the correct files in the pool"
         self.__super.write(pool)
-        pool['unp3b'].write("UNPV id '%(id)s' na 16 ar %(area_grass)i 0 0 0 0 %(area_misc)i 0 0 0 0 0 0 0 0 0 %(area_nature)i ga %(groundw_area)i lv %(level).2f co %(ground_comp_type)i su %(use_scurve)i '%(scurve_def)s' sd '%(storage_def)s' %(storage_comp)s '%(alfa_def)s' sp '%(seepage_def)s' ic '%(infilt_cap_def)s' bt %(soil_type)i ig 0 %(ini_groundwater)s mg %(level).2f gl %(groundlayer).2f ms '%(meteo_station)s' is %(isc).2f unpv\n" % self)
+        pool['unp3b'].write("UNPV id '%(id)s' na 16 ar %(area_grass)i %(area_corn)i %(area_potato)i %(area_beet)i %(area_grain)i %(area_misc)i %(area_nonarab)i %(area_greenhouse)i %(area_orchard)i %(area_bulbous)i %(area_foliage)i %(area_pine)i %(area_nature)i %(area_fallow)i %(area_vegetable)i %(area_flower)i ga %(groundw_area)i lv %(level).2f co %(ground_comp_type)i su %(use_scurve)i '%(scurve_def)s' sd '%(storage_def)s' %(storage_comp)s '%(alfa_def)s' sp '%(seepage_def)s' ic '%(infilt_cap_def)s' bt %(soil_type)i ig 0 %(ini_groundwater)s mg %(level).2f gl %(groundlayer).2f ms '%(meteo_station)s' is %(isc).2f unpv\n" % self)
         pool['unptbl'].write("SC_T id '%(scurve_def)s' nm '%(id)s' PDIN 1 0 pdin TBLE\n%(scurve_table)s tble sc_t\n" % self)
         pool['unpsto'].write("STDF id '%(storage_def)s' nm '%(id)s' ml %(land_storage).1f il %(initial_land_storage).1f stdf\n" % self)
         pool['unpsep'].write("SEEP id '%(seepage_def)s' nm '%(id)s' co 1 sp %(kwel).2f ss %(kwel_salt_concentration).2f cv %(kwel_resist_C).1f seep\n" % self)
@@ -619,12 +619,23 @@ class OnverhardLand(Onverhard):
         self['ycoord'] += 25
         self.update({
                 'area_grass': int(float(peilgebied['grass_area']) * 10000),
+                'area_corn': int(float(peilgebied['corn_area']) * 10000),
+                'area_potato': int(float(peilgebied['potatoes_area']) * 10000),
+                'area_beet': int(float(peilgebied['sugarbeet_area']) * 10000),
+                'area_grain': int(float(peilgebied['grain_area']) * 10000),
+                'area_misc': int(float(peilgebied['miscellaneous_area']) * 10000),
+                'area_nonarab': 0,
+                'area_greenhouse': int(float(peilgebied['greenhouse_area']) * 10000),
+                'area_orchard': int(float(peilgebied['orchard_area']) * 10000),
+                'area_bulbous': int(float(peilgebied['bulbous_plants_area']) * 10000),
+                'area_foliage': int(float(peilgebied['foliage_forest_area']) * 10000),
+                'area_pine': int(float(peilgebied['pine_forest_area']) * 10000),
                 'area_nature': int(float(peilgebied['nature_area']) * 10000),
-                'area_misc': 0,
-                'area': int((float(peilgebied['grass_area']) * 10000) +
-                            int(float(peilgebied['nature_area']) * 10000)),
-                'groundw_area': (int(float(peilgebied['nature_area']) * 10000) +
-                                  int(float(peilgebied['grass_area']) * 10000)),
+                'area_fallow': int(float(peilgebied['fallow_area']) * 10000),
+                'area_vegetable': int(float(peilgebied['vegetables_area']) * 10000),
+                'area_flower': int(float(peilgebied['flowers_area']) * 10000),
+                'area': int(float(peilgebied['OnverhardLand_area']) * 10000),             
+                'groundw_area': int(float(peilgebied['OnverhardLand_area']) * 10000),
                 'use_scurve': settings.getfloat('globals', 'use_scurve'),
                 'land_storage': peilgebied['maxBergingLand'],
                 'initial_land_storage': peilgebied['bergingLandIni'],
@@ -645,8 +656,21 @@ class OnverhardSted(Onverhard):
         self['ycoord'] -= 25
         self.update({
                 'area_grass': 0,
+                'area_corn': 0,
+                'area_potato': 0,
+                'area_beet': 0,
+                'area_grain': 0,
+                'area_misc': 0,
+                'area_nonarab': int(float(peilgebied['nonarable_land_area']) * 10000),
+                'area_greenhouse': 0,
+                'area_orchard': 0,
+                'area_bulbous': 0,
+                'area_foliage': 0,
+                'area_pine': 0,
                 'area_nature': 0,
-                'area_misc': int(peilgebied['onverhardsted_area'] * 10000),
+                'area_fallow': 0,
+                'area_vegetable': 0,
+                'area_flower': 0,
                 'area': int(peilgebied['onverhardsted_area'] * 10000),
                 'groundw_area': (int(float(peilgebied['onverhardsted_area']) * 10000) +
                                  int(float(peilgebied['kas_area']) * 10000) +
@@ -1289,8 +1313,6 @@ def main(options, args):
                                                'onverhardsted_area': 0.0,
                                                'onverhardland_area': 0.0,
                                                'kas_area': 0.0,
-                                               'grass_area': 0.0,
-                                               'nature_area': 0.0,
                                                })
 
         for peilgebied in peilgebieden:
@@ -1394,7 +1416,7 @@ def main(options, args):
             # exists or not.
             log.debug("area of %s for %s is %s" % (type_name, peilgebied['id'], peilgebied[type_name + '_area']))
             if type_name == 'onverhardland':
-                input_area = float(peilgebied['grass_area']) + float(peilgebied['nature_area'])
+                input_area = float(peilgebied['OnverhardLand_area'])
             else:
                 input_area = float(peilgebied[type_name + '_area'])
 

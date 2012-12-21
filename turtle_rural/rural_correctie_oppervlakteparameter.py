@@ -9,8 +9,6 @@ from turtlebase.logutils import LoggingConfig
 from turtlebase import mainutils
 import nens.gp
 import turtlebase.arcgis
-import turtlebase.filenames
-import turtlebase.general
 
 log = logging.getLogger(__name__)
 
@@ -43,18 +41,18 @@ def main():
         area_field = config.get('controlerenoppervlakken', 'input_oppervlak_area')
         verhard_field = config.get('controlerenoppervlakken', 'input_oppervlak_verhard')
         onvsted_field = config.get('controlerenoppervlakken', 'input_oppervlak_onvsted')
-        gras_field = config.get('controlerenoppervlakken', 'input_oppervlak_gras')
-        natuur_field = config.get('controlerenoppervlakken', 'input_oppervlak_natuur')
-        #onvland_field = config.get('controlerenoppervlakken', 'input_oppervlak_onvland')
+        #gras_field = config.get('controlerenoppervlakken', 'input_oppervlak_gras')
+        #natuur_field = config.get('controlerenoppervlakken', 'input_oppervlak_natuur')
+        onvland_field = config.get('controlerenoppervlakken', 'input_oppervlak_onvland')
         kassen_field = config.get('controlerenoppervlakken', 'input_oppervlak_kassen')
         openwat_field = config.get('controlerenoppervlakken', 'input_oppervlak_openwat')
 
-        if not turtlebase.arcgis.is_fieldname(gp, input_oppervlak, gras_field):
-            log.error("Your Hydrobase is probably deprecated, please add %s to your rr_oppervlak table" % gras_field)
-            sys.exit(1)
-        if not turtlebase.arcgis.is_fieldname(gp, input_oppervlak, natuur_field):
-            log.error("Your Hydrobase is probably deprecated, please add %s to your rr_oppervlak table" % natuur_field)
-            sys.exit(1)
+        #if not turtlebase.arcgis.is_fieldname(gp, input_oppervlak, gras_field):
+        #    log.error("Your Hydrobase is probably deprecated, please add %s to your rr_oppervlak table" % gras_field)
+        #    sys.exit(1)
+        #if not turtlebase.arcgis.is_fieldname(gp, input_oppervlak, natuur_field):
+        #    log.error("Your Hydrobase is probably deprecated, please add %s to your rr_oppervlak table" % natuur_field)
+        #    sys.exit(1)
 
         input_check_bound_lower = float(config.get('controlerenoppervlakken', 'input_check_bound_lower'))
         input_check_bound_upper = float(config.get('controlerenoppervlakken', 'input_check_bound_upper'))
@@ -71,13 +69,16 @@ def main():
             onvsted = row.GetValue(onvsted_field)
             if onvsted is None:
                 onvsted = 0
-            gras = row.GetValue(gras_field)
-            if gras is None:
-                gras = 0
-            natuur = row.GetValue(natuur_field)
-            if natuur is None:
-                natuur = 0
-            #onvland = row.GetValue(onvland_field)
+            #gras = row.GetValue(gras_field)
+            #if gras is None:
+            #    gras = 0
+            #natuur = row.GetValue(natuur_field)
+            #if natuur is None:
+            #    natuur = 0
+            onvland = row.GetValue(onvland_field)
+            if onvland is None:
+                onvland = 0
+            
             kassen = row.GetValue(kassen_field)
             if kassen is None:
                 kassen = 0
@@ -90,39 +91,31 @@ def main():
             if openwat < float(config.get('controlerenoppervlakken', 'input_check_min_openwater_ha')):
                 openwat = float(config.get('controlerenoppervlakken', 'input_check_min_openwater_ha'))
 
-            delta = area - (verhard + onvsted + gras + natuur + kassen + openwat)
+            delta = area - (verhard + onvsted + onvland + kassen + openwat)
             if delta > input_check_bound_upper or delta < input_check_bound_lower:
-                if (natuur + delta) > 0:
-                    natuur = natuur + delta
-                    log.info("Oppervlak %s voor peilvak %s aangepast." % (natuur_field, ident))
-                    opm_correc = "Oppervlak %s voor peilvak aangepast." % natuur_field
-                elif (natuur + gras + delta) > 0:
-                    gras = gras + natuur + delta
-                    natuur = 0
-                    log.info("Oppervlak %s en %s voor peilvak %s aangepast." % (gras_field, natuur_field, ident))
-                    opm_correc = "Oppervlak %s en %s voor peilvak aangepast." % (natuur_field, gras_field)
-                elif (onvsted + gras + natuur + delta) > 0:
-                    onvsted = onvsted + gras + natuur + delta
-                    gras = 0
-                    natuur = 0
-                    log.info("Oppervlak %s, %s en %s voor peilvak %s aangepast." % (gras_field, natuur_field, onvsted_field, ident))
-                    opm_correc = "Oppervlak %s, %s en %s voor peilvak aangepast." % (natuur_field, gras_field, onvsted_field)
+                if (onvland + delta) > 0:
+                    onvland = onvland + delta
+                    log.info("Oppervlak %s voor peilvak %s aangepast." % (onvland_field, ident))
+                    opm_correc = "Oppervlak %s voor peilvak aangepast." % (onvland_field)
+                elif (onvsted + onvland + delta) > 0:
+                    onvsted = onvsted + onvland + delta
+                    onvland = 0
+                    log.info("Oppervlak %s en %s voor peilvak %s aangepast." % (onvland_field, onvsted_field, ident))
+                    opm_correc = "Oppervlak %s en %s voor peilvak aangepast." % (onvland_field, onvsted_field)
 
-                elif (kassen + onvsted + gras + natuur + delta) > 0:
-                    kassen = kassen + onvsted + gras + natuur + delta
-                    gras = 0
-                    natuur = 0
+                elif (kassen + onvsted + onvland + delta) > 0:
+                    kassen = kassen + onvsted + onvland + delta
+                    onvland = 0
                     onvsted = 0
-                    log.info("Oppervlak %s, %s, %s en %s voor peilvak %s aangepast." % (kassen_field, gras_field, natuur_field, onvsted_field, ident))
-                    opm_correc = "Oppervlak %s, %s, %s en %s voor peilvak aangepast." % (kassen_field, gras_field, natuur_field, onvsted_field)
-                elif (verhard + kassen + onvsted + gras + natuur + delta) > 0:
-                    verhard = verhard + kassen + onvsted + gras + natuur + delta
-                    gras = 0
-                    natuur = 0
+                    log.info("Oppervlak %s, %s en %s voor peilvak %s aangepast." % (kassen_field, onvland_field, onvsted_field, ident))
+                    opm_correc = "Oppervlak %s, %s en %s voor peilvak aangepast." % (kassen_field, onvland_field, onvsted_field)
+                elif (verhard + kassen + onvsted + onvland + delta) > 0:
+                    verhard = verhard + kassen + onvsted + onvland + delta
+                    onvland = 0
                     onvsted = 0
                     kassen = 0
-                    log.info("Oppervlak %s, %s, %s, %s en %s voor peilvak %s aangepast." % (verhard_field, kassen_field, gras_field, natuur_field, onvsted_field, ident))
-                    opm_correc = "Oppervlak %s, %s, %s, %s en %s voor peilvak aangepast." % (verhard_field, kassen_field, gras_field, natuur_field, onvsted_field)
+                    log.info("Oppervlak %s, %s, %s en %s voor peilvak %s aangepast." % (verhard_field, kassen_field, onvland_field, onvsted_field, ident))
+                    opm_correc = "Oppervlak %s, %s, %s en %s voor peilvak aangepast." % (verhard_field, kassen_field, onvland_field, onvsted_field)
                 else:
                     log.info("Oppervlakken voor peilvak %s niet gecorrigeerd." % ident)
             else:
@@ -131,8 +124,7 @@ def main():
             #write output
             #in the worst case, we only fill in opm_correc. so we always update the row
             row.SetValue(area_field, area)
-            row.SetValue(gras_field, gras)
-            row.SetValue(natuur_field, natuur)
+            row.SetValue(onvland_field, onvland)
             row.SetValue(verhard_field, verhard)
             row.SetValue(onvsted_field, onvsted)
             row.SetValue(kassen_field, kassen)

@@ -11,7 +11,6 @@ from turtlebase import mainutils
 import nens.gp
 import nens.geom
 import turtlebase.arcgis
-import turtlebase.general
 
 log = logging.getLogger(__name__)
 
@@ -297,7 +296,7 @@ def main():
             log.error("missing fields in input data: %s" % missing_fields)
             sys.exit(2)
         #---------------------------------------------------------------------
-        multipoints = turtlebase.arcgis.get_random_file_name(workspace_gdb)
+        multipoints = turtlebase.arcgis.get_random_file_name(workspace, ".shp")
         log.info("Dissolving pointcloud to multipoint")
         gp.Dissolve_management(mpoint, multipoints, "PROIDENT")
 
@@ -307,7 +306,7 @@ def main():
         log.info("Calculating coordinates of centerpoints")
         create_centroids(gp, multipoints, output_locations, 'PROIDENT')
 
-        centerpoints_sj = turtlebase.arcgis.get_random_file_name(workspace_gdb)
+        centerpoints_sj = turtlebase.arcgis.get_random_file_name(workspace, ".shp")
         log.info("Calculation adjacent hydrolines")
         gp.SpatialJoin_analysis(output_locations, hydroline, centerpoints_sj,
                                 'JOIN_ONE_TO_ONE', "#", "#", "CLOSEST", 100)
@@ -333,7 +332,9 @@ def main():
         # Delete temporary workspace geodatabase & ascii files
         try:
             log.debug("delete temporary workspace: %s" % workspace_gdb)
-            #gp.delete(workspace_gdb)
+            gp.delete(multipoints)
+            gp.delete(centerpoints_sj)
+            
 
             log.info("workspace deleted")
         except:
