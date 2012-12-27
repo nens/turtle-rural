@@ -33,7 +33,7 @@ def get_line_parts(gp, line_fc, line_ident):
     return lineparts
 
 
-def get_pointcloud(gp, point_fc, point_ident):
+def get_pointcloud(gp, point_fc, point_ident, zcoord):
     """
     reads all the points in the pointcloud and return a
     dict with all points that match point_id
@@ -46,9 +46,10 @@ def get_pointcloud(gp, point_fc, point_ident):
         feat = item.GetValue(point_desc.ShapeFieldName)
         item_id = item.GetValue(point_ident)
 
-        pnt_xyz = (feat.Centroid.X,
-                  feat.Centroid.Y,
-                  float(item.GetValue('ZCOORD')))
+        point_x, point_y = calculate_xy(gp, feat)
+        pnt_xyz = (point_x,
+                  point_y,
+                  float(item.GetValue(zcoord)))
 
         if item_id not in pointcloud:
             pointcloud[item_id] = [pnt_xyz]
@@ -58,6 +59,22 @@ def get_pointcloud(gp, point_fc, point_ident):
     return pointcloud
 
 
+def calculate_xy(gp, point):
+    """calculates coordinates from a point
+    in Arcgis 9.3 and 10.0 the coordinates are stored as a string ("x y"
+    in ArcGIS 10.1
+    """
+    installinfo = gp.GetInstallInfo("desktop")
+    if str(installinfo["Version"]) == "10.1":
+        x_coord = point.Centroid.X
+        y_coord = point.Centroid.Y
+        
+    else:
+        x_coord = float(point.Centroid.split(" ")[0])
+        y_coord = float(point.Centroid.split(" ")[1])
+    return x_coord, y_coord
+    
+	
 def create_centroids(gp, multipoints, output_fc, mp_ident):
     """creates a centerpoint fc out of a multipoint fc
     """
@@ -70,9 +87,8 @@ def create_centroids(gp, multipoints, output_fc, mp_ident):
     for item in nens.gp.gp_iterator(row):
         feat = item.GetValue(mpoint_desc.ShapeFieldName)
         item_id = item.GetValue(mp_ident)
-        xcoord = feat.Centroid.X
-        ycoord = feat.Centroid.Y
-
+        xcoord, ycoord = calculate_xy(gp, feat)
+        
         center_points[item_id] = {"xcoord": xcoord, "ycoord": ycoord}
 
     workspace = os.path.dirname(output_fc)
@@ -273,6 +289,9 @@ def main():
             log.error("check input: %s" % geometry_check_list)
             sys.exit(2)
         #---------------------------------------------------------------------
+        ovkident = 'ovkident'
+        proident = 'proident'
+        zcoord = 'zcoord'
         # Check required fields in input data
         log.info("Check required fields in input data")
 
@@ -280,7 +299,8 @@ def main():
 
         #<check required fields from input data,
         #        append them to list if missing>
-        check_fields = {}
+        check_fields = {hydroline: [ovkident],
+                        mpoint: [proident, zcoord]}
         #check_fields = {input_1: [fieldname1, fieldname2],
         #                 input_2: [fieldname1, fieldname2]}
         for input_fc, fieldnames in check_fields.items():
@@ -298,13 +318,13 @@ def main():
         #---------------------------------------------------------------------
         multipoints = turtlebase.arcgis.get_random_file_name(workspace, ".shp")
         log.info("Dissolving pointcloud to multipoint")
-        gp.Dissolve_management(mpoint, multipoints, "PROIDENT")
+        gp.Dissolve_management(mpoint, multipoints, proident)
 
         if output_locations == '#':
             output_locations = (
                 turtlebase.arcgis.get_random_file_name(workspace_gdb))
         log.info("Calculating coordinates of centerpoints")
-        create_centroids(gp, multipoints, output_locations, 'PROIDENT')
+        create_centroids(gp, multipoints, output_locations, proident)
 
         centerpoints_sj = turtlebase.arcgis.get_random_file_name(workspace, ".shp")
         log.info("Calculation adjacent hydrolines")
@@ -313,12 +333,12 @@ def main():
 
         log.info("Reading center points")
         centerpoints_d = nens.gp.get_table(gp, centerpoints_sj,
-                                           primary_key='proident')
+                                           primary_key=proident)
 
         log.info("Reading hydrolines")
-        lineparts = get_line_parts(gp, hydroline, 'ovkident')
+        lineparts = get_line_parts(gp, hydroline, ovkident)
         log.info("Reading pointcloud")
-        pointcloud = get_pointcloud(gp, mpoint, 'proident')
+        pointcloud = get_pointcloud(gp, mpoint, proident, zcoord)
 
         log.info("Sorting profiles")
         profiles_xyz, profiles_yz = sort_pointcloud(gp, centerpoints_d,
