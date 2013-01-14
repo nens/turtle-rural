@@ -121,9 +121,11 @@ def read_table(gp, config, input_fc, col_area):
         result[item.GetValue(col_ovkident)] = {col_from_x: item.GetValue(col_from_x),
                                                col_from_y: item.GetValue(col_from_y),
                                                col_to_x: item.GetValue(col_to_x),
-                                               col_to_y: item.GetValue(col_to_y),
-                                               col_area: item.GetValue(col_area)}
-        
+                                               col_to_y: item.GetValue(col_to_y)}
+        if col_area != "#":
+            result[item.GetValue(col_ovkident)][col_area] = item.GetValue(col_area)
+        else:
+            result[item.GetValue(col_ovkident)][col_area] = 0
     return result
     
         
@@ -156,7 +158,7 @@ def main():
         tempfiles = []
         if len(sys.argv) == 6:
             input_hydrovak = sys.argv[1]
-            optional_area = sys.argv[2]
+            optional_area = sys.argv[2][:10]
             output_shapefile = sys.argv[3]
             optional_bottleneck_points = sys.argv[4]
             optional_terminal_points = sys.argv[5]            

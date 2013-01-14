@@ -61,7 +61,7 @@ def get_pointcloud(gp, point_fc, point_ident, zcoord):
 
 def calculate_xy(gp, point):
     """calculates coordinates from a point
-    in Arcgis 9.3 and 10.0 the coordinates are stored as a string ("x y"
+    in ArcGIS 9.3 and 10.0 the coordinates are stored as a string ("x y"
     in ArcGIS 10.1
     """
     installinfo = gp.GetInstallInfo("desktop")
@@ -74,7 +74,7 @@ def calculate_xy(gp, point):
         y_coord = float(point.Centroid.split(" ")[1])
     return x_coord, y_coord
     
-	
+
 def create_centroids(gp, multipoints, output_fc, mp_ident):
     """creates a centerpoint fc out of a multipoint fc
     """

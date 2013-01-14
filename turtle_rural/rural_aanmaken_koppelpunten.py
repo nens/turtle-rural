@@ -13,7 +13,6 @@ import nens.gp
 
 # Import Turtlebase modules
 import turtlebase.arcgis
-import turtlebase.general
 from turtlebase import mainutils
 from turtlebase.logutils import LoggingConfig
 
@@ -51,15 +50,6 @@ def add_xy_coords(gp, fc, xfield, yfield):
         rows.UpdateRow(row)
 
 
-def read_coordinates_from_string(point):
-    ''' the coordinates are in a string as follows: 'x y'
-        returns de x en y as floating point
-        '''
-    x = float(point.X)
-    y = float(point.Y)
-    return x, y
-
-
 def calculate_distance(x1, y1, x2, y2):
     ''' berekent de afstand tussen x1 y1 en x2 y2. input zijn de coordinaten als floating point '''
     x_kwadraat = math.pow((x1 - x2), 2)
@@ -68,7 +58,7 @@ def calculate_distance(x1, y1, x2, y2):
     return distance
 
 
-def calculate_minimal_distance_between_points(peilgebieden_centroides_dict, waterlijnen_punten_dict, waterlijnen_vertex_dict):
+def calculate_minimal_distance_between_points(gp, peilgebieden_centroides_dict, waterlijnen_punten_dict, waterlijnen_vertex_dict):
     '''Berekent de afstand tussen 2 punten, de centroide en 1 van de punten uit de waterlijnen_punten_dict.
     Bewaart het punt met de kortste afstand tussen waterlijnen en de centroide_dict
     '''
@@ -80,7 +70,7 @@ def calculate_minimal_distance_between_points(peilgebieden_centroides_dict, wate
             for punt_op_waterlijn in waterlijnen_punten_dict[peilgebied].keys():
                 punt_x = waterlijnen_punten_dict[peilgebied][punt_op_waterlijn].X
                 punt_y = waterlijnen_punten_dict[peilgebied][punt_op_waterlijn].Y
-                centroid_x, centroid_y = read_coordinates_from_string(peilgebieden_centroides_dict[peilgebied]['centroid'])
+                centroid_x, centroid_y = turtlebase.arcgis.calculate_xy(gp, (peilgebieden_centroides_dict[peilgebied]['centroid']))
                 #calculate_distance
                 distance = calculate_distance(punt_x, punt_y, centroid_x, centroid_y)
                 distance_dict[distance] = punt_op_waterlijn
@@ -116,58 +106,6 @@ def calculate_minimal_distance_between_points(peilgebieden_centroides_dict, wate
     return output_dict
 
 
-def create_nodes(gp, input_lines, nodes, peilgebied_id):
-    """
-    reads a line fc and returns the nodes (point fc)
-    """
-    gp.CreateFeatureClass_management(os.path.dirname(nodes), os.path.basename(nodes), "POINT")
-    gp.Addfield_management(nodes, peilgebied_id, "TEXT")
-
-    in_rows = gp.SearchCursor(input_lines)
-    in_row = in_rows.Next()
-    out_rows = gp.InsertCursor(nodes)
-    pnt = gp.CreateObject("Point")
-
-    inDesc = gp.describe(input_lines)
-    while in_row:
-        ident = in_row.GetValue("OVKIDENT")
-
-        points = {}
-        feat = in_row.GetValue(inDesc.ShapeFieldName)
-
-        lengte = in_row.GetValue("GEOMETRIE_")
-
-        part = feat.getpart(0)
-        pnt_list = [(float(pnt.x), float(pnt.y)) for pnt in nens.gp.gp_iterator(part)]
-
-        XY = calculate_sp(percentage, max_distance, lengte, pnt_list)
-        pnt.X = XY[0]
-        pnt.Y = XY[1]
-
-        out_row = out_rows.newRow()
-        out_row.shape = pnt
-        out_row.setValue("PROIDENT", ident)
-        out_row.setValue("LOCIDENT", "%s_a" % ident)
-        out_rows.insertRow(out_row)
-
-        pnt_list.reverse()
-        XY = calculate_sp(percentage, max_distance, lengte, pnt_list)
-        pnt.X = XY[0]
-        pnt.Y = XY[1]
-
-        out_row = out_rows.newRow()
-        out_row.shape = pnt
-        out_row.setValue("PROIDENT", ident)
-        out_row.setValue("LOCIDENT", "%s_b" % ident)
-        out_rows.insertRow(out_row)
-        in_row = in_rows.Next()
-
-    del out_rows
-    del in_rows
-
-    return nodes
-
-
 def create_point_file_from_dict(gp, centroid_dict, output_centroid_file, peilgebied_id):
     '''Creeert een punten_shape obv een dictionary met centroides  daarnaast voegt het de peilgebiedid toe aan de file'''
     output_centroid_filename = os.path.basename(output_centroid_file)
@@ -182,7 +120,7 @@ def create_point_file_from_dict(gp, centroid_dict, output_centroid_file, peilgeb
         newfeat = rows_out.NewRow()
         #log.info(centroid_dict[peilgebied])
         #punt = centroid_dict[peilgebied].X
-        log.info(centroid_dict[peilgebied])
+        #log.info(centroid_dict[peilgebied])
         pnt.X = centroid_dict[peilgebied].X
         pnt.Y = centroid_dict[peilgebied].Y
 
@@ -268,15 +206,15 @@ def reading_line_features_vertices(gp, inputFC, field_peilgebied_id, peilgebiede
 
 def bepalen_centroides(gp, polygon_shape, field_containing_key):
     """Leest centroides in uit een vlakkenshape en stopt ze in een dictionary met de key uit een veld zoals meegegevens """
-    dict = {}
+    output_dict = {}
     row = gp.SearchCursor(polygon_shape)
     for item in nens.gp.gp_iterator(row):
         key = item.getValue(field_containing_key)
         centroid = item.shape.centroid
-        if not dict.has_key(key):
-            dict[key] = {}
-            dict[key]['centroid'] = centroid
-    return dict
+        if not output_dict.has_key(key):
+            output_dict[key] = {}
+            output_dict[key]['centroid'] = centroid
+    return output_dict
 
 
 def main():
@@ -360,9 +298,7 @@ def main():
 
             #bereken het punt het dichtst bij de centroide van een peilgebied. Kijk eerst naar de nodes, dan naar vertices en indien geen waterlijn aanwezig maak dan
             # centroide punt aan van het peilgebied
-
-            dictionary_with_closest_point_to_centroid_on_waterlijn = calculate_minimal_distance_between_points(peilgebieden_centroides_dict, waterlijnen_nodes_dict, waterlijnen_vertex_dict)
-
+            dictionary_with_closest_point_to_centroid_on_waterlijn = calculate_minimal_distance_between_points(gp, peilgebieden_centroides_dict, waterlijnen_nodes_dict, waterlijnen_vertex_dict)
 
             output_centroid_file = turtlebase.arcgis.get_random_file_name(workspace_gdb)
 

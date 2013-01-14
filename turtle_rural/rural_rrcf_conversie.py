@@ -13,7 +13,6 @@ import nens.gp
 
 # Import Turtlebase modules
 import turtlebase.arcgis
-import turtlebase.general
 from turtle_rural import trrrlib
 from turtlebase.logutils import LoggingConfig
 from turtlebase import mainutils

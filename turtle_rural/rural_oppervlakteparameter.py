@@ -275,6 +275,7 @@ def main():
             value_gridcode = row.GetValue(gridcode)
             value_lgn_id = int(value_gridcode)
             value_peilgeb_area = float(row.shape.Area) / 10000 #Area is in m2
+            
             gewastype = conversion[value_lgn_id]['gewastype']
             #add to area
             if output_with_area.has_key(value_gpgident):

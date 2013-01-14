@@ -558,7 +558,7 @@ class Onverhard(SobekNode):
         if not(0 < self['ini_groundwater'] <= 99):
             self['ini_groundwater'] = -999.99
 
-        self['SCurve_Level'] = peilgebied.get('maaiveldHgt', {}).items()
+        self['scurve_Level'] = peilgebied.get('maaiveldHgt', {}).items()
         self['scurve_level'].sort()
         self['scurve_table'] = ''.join([" %i %.2f <\n" % (percentage, value) for percentage, value in self['scurve_level']])
 
