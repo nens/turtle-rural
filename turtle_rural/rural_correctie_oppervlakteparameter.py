@@ -24,8 +24,9 @@ def main():
         #----------------------------------------------------------------------------------------
         #check inputfields
         log.info("Getting command parameters")
-        if len(sys.argv) == 2:
+        if len(sys.argv) == 3:
             input_oppervlak = sys.argv[1]
+            input_gewassen = sys.argv[2]
         else:
             log.error("Usage: python rural_correctie_oppervlakken.py <RR_Oppervlak>")
             sys.exit(1)
@@ -38,27 +39,23 @@ def main():
             gp.AddField(input_oppervlak, opm_correc_field, 'TEXT', '#', '#', 50)
 
         gpgident_field = config.get('GENERAL', 'gpgident')
-        area_field = config.get('controlerenoppervlakken', 'input_oppervlak_area')
-        verhard_field = config.get('controlerenoppervlakken', 'input_oppervlak_verhard')
-        onvsted_field = config.get('controlerenoppervlakken', 'input_oppervlak_onvsted')
-        #gras_field = config.get('controlerenoppervlakken', 'input_oppervlak_gras')
-        #natuur_field = config.get('controlerenoppervlakken', 'input_oppervlak_natuur')
-        onvland_field = config.get('controlerenoppervlakken', 'input_oppervlak_onvland')
-        kassen_field = config.get('controlerenoppervlakken', 'input_oppervlak_kassen')
-        openwat_field = config.get('controlerenoppervlakken', 'input_oppervlak_openwat')
+        area_field = config.get('OppervlakteParameters', 'input_oppervlak_area')
+        verhard_field = config.get('OppervlakteParameters', 'input_oppervlak_verhard')
+        onvsted_field = config.get('OppervlakteParameters', 'input_oppervlak_onvsted')
+        onvland_field = config.get('OppervlakteParameters', 'input_oppervlak_onvland')
+        kassen_field = config.get('OppervlakteParameters', 'input_oppervlak_kassen')
+        openwat_field = config.get('OppervlakteParameters', 'input_oppervlak_openwat')
 
-        #if not turtlebase.arcgis.is_fieldname(gp, input_oppervlak, gras_field):
-        #    log.error("Your Hydrobase is probably deprecated, please add %s to your rr_oppervlak table" % gras_field)
-        #    sys.exit(1)
-        #if not turtlebase.arcgis.is_fieldname(gp, input_oppervlak, natuur_field):
-        #    log.error("Your Hydrobase is probably deprecated, please add %s to your rr_oppervlak table" % natuur_field)
-        #    sys.exit(1)
-
-        input_check_bound_lower = float(config.get('controlerenoppervlakken', 'input_check_bound_lower'))
-        input_check_bound_upper = float(config.get('controlerenoppervlakken', 'input_check_bound_upper'))
+        input_check_bound_lower = float(config.get('OppervlakteParameters', 'input_check_bound_lower'))
+        input_check_bound_upper = float(config.get('OppervlakteParameters', 'input_check_bound_upper'))
 
         rows = gp.UpdateCursor(input_oppervlak)
-        for row in nens.gp.gp_iterator(rows):
+        if input_gewassen != '#':
+            rows_gw = gp.UpdateCursor(input_gewassen)
+            row_gw = rows_gw.next()
+            
+        row = rows.next()
+        while row:
             ident = row.GetValue(gpgident_field)
             area = row.GetValue(area_field)
             if area is None:
@@ -69,12 +66,6 @@ def main():
             onvsted = row.GetValue(onvsted_field)
             if onvsted is None:
                 onvsted = 0
-            #gras = row.GetValue(gras_field)
-            #if gras is None:
-            #    gras = 0
-            #natuur = row.GetValue(natuur_field)
-            #if natuur is None:
-            #    natuur = 0
             onvland = row.GetValue(onvland_field)
             if onvland is None:
                 onvland = 0
@@ -88,8 +79,8 @@ def main():
 
             opm_correc = ""
 
-            if openwat < float(config.get('controlerenoppervlakken', 'input_check_min_openwater_ha')):
-                openwat = float(config.get('controlerenoppervlakken', 'input_check_min_openwater_ha'))
+            if openwat < float(config.get('OppervlakteParameters', 'input_check_min_openwater_ha')):
+                openwat = float(config.get('OppervlakteParameters', 'input_check_min_openwater_ha'))
 
             delta = area - (verhard + onvsted + onvland + kassen + openwat)
             if delta > input_check_bound_upper or delta < input_check_bound_lower:
@@ -135,6 +126,9 @@ def main():
 
             row.SetValue(opm_correc_field, opm_correc)
             rows.UpdateRow(row)
+            row = rows.next()
+            
+        del row
         mainutils.log_footer()
 
     except:

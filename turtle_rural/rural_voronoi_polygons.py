@@ -10,7 +10,6 @@ from turtlebase.logutils import LoggingConfig
 from turtlebase import mainutils
 import turtlebase.arcgis
 import turtlebase.voronoi
-import turtlebase.general
 
 log = logging.getLogger(__name__)
 

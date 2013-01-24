@@ -201,13 +201,19 @@ def main():
         missing_fields = []
 
         "<check required fields from input data, append them to list if missing>"
-        gpgident = config.get('GENERAL', 'gpgident')
+        gpgident = config.get('GENERAL', 'gpgident')        
         if not turtlebase.arcgis.is_fieldname(gp, input_peilgebieden_feature, gpgident):
             log.debug(" - missing: %s in %s" % (gpgident, input_peilgebieden_feature))
             missing_fields.append("%s: %s" % (input_peilgebieden_feature, gpgident))
 
+        hectares = config.get('OppervlakteParameters', 'input_oppervlak_area')
+        verhard_ha = config.get('OppervlakteParameters', 'input_oppervlak_verhard')
+        onvsted_ha = config.get('OppervlakteParameters', 'input_oppervlak_onvsted')
+        kassen_ha = config.get('OppervlakteParameters', 'input_oppervlak_kassen')
+        onvland_ha = config.get('OppervlakteParameters', 'input_oppervlak_onvland')
+        openwat_ha = config.get('OppervlakteParameters', 'input_oppervlak_openwat')
         lgn_id = config.get('OppervlakteParameters', 'input_field_lgncode')
-        conversion_fields = [lgn_id, "verhard_ha", "onvsted_ha", "kassen_ha", "onvland_ha", "openwat_ha"]
+        conversion_fields = [lgn_id, verhard_ha, onvsted_ha, kassen_ha, onvland_ha, openwat_ha, hectares]
         for conversion_field in conversion_fields:
             if not turtlebase.arcgis.is_fieldname(gp, input_conversiontable_dbf, conversion_field):
                 log.debug(" - missing: %s in %s" % (conversion_field, input_conversiontable_dbf))

@@ -513,7 +513,7 @@ class Kas(SobekNode):
                 'xcoord': peilgebied['xcoord'] + 25,
                 'ycoord': peilgebied['ycoord'],
                 })
-        self['storage_area_classes'][2] = int((peilgebied['kas_area'] * 10000))
+        self['storage_area_classes'][int(peilgebied['basin_class'])] = int((peilgebied['kas_area'] * 10000))
         self['storage_areas'] = " ".join(['%0.1f' % float(i) for i in self['storage_area_classes']])
 
     def write(self, pool):
