@@ -130,16 +130,15 @@ def main():
         tempfiles.append(output_fc_line)
         gp.Dissolve_management(temp_fc,output_fc_line,ovkident,"#","MULTI_PART","DISSOLVE_LINES")
         
-        gp.merge_management([a_watergang, output_fc_line], output_fc)
-            
+        gp.merge_management("%s;%s"% (a_watergang, output_fc_line), output_fc)
         gp.Intersect_analysis("%s #;%s #" % (a_watergang, bc_watergang), point_intersection,"ALL","#","POINT")
                 
         #---------------------------------------------------------------------
         # Delete temporary workspace geodatabase & ascii files
-        for tempfile in tempfiles:
-            if gp.exists(tempfile):
-                gp.delete(tempfile)
         try:
+            for tempfile in tempfiles:
+                if gp.exists(tempfile):
+                    gp.delete(tempfile)
             log.debug("delete temporary workspace: %s" % workspace_gdb)
             gp.delete(workspace_gdb)
 
