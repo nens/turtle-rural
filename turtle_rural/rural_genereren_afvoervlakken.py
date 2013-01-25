@@ -5,13 +5,13 @@ import logging
 import os
 import sys
 import traceback
+import shutil
 
 from turtlebase.logutils import LoggingConfig
 from turtlebase import mainutils
 import nens.gp
 import turtlebase.arcgis
 import turtlebase.voronoi
-import turtlebase.general
 
 log = logging.getLogger(__name__)
 
@@ -91,8 +91,10 @@ def main():
         gp.Intersect_analysis(input_polygon_fc + ";" + input_channel_fc, intersect_waterlijn)
 
         polygon_list = []
+        if not os.path.isdir(os.path.join(workspace, "voronoi_work")):
+            os.makedirs(os.path.join(workspace, "voronoi_work"))
         counter = 0
-        for k, v in polygon_dict.items():
+        for k in polygon_dict.keys():
             counter += 1
             log.info("extract polygon %s" % k)
 
@@ -119,7 +121,7 @@ def main():
                 polygon_fc = turtlebase.voronoi.create_merged_polygons(result_dict, workspace_gdb)
 
                 log.info(" - intersect line_voronoi polygons")
-                output_intersect_fc = os.path.join(workspace, "voronoi_work", "voronoi_%s" % counter)
+                output_intersect_fc = os.path.join(workspace, "voronoi_work", "voronoi_%s.shp" % counter)
 
                 gp.Intersect_analysis(huidig_peilgebied_lyr + ";" + polygon_fc, output_intersect_fc)
 
@@ -160,10 +162,10 @@ def main():
 
         #----------------------------------------------------------------------------------------
         # Delete temporary workspace geodatabase
+        shutil.rmtree(os.path.join(workspace, "voronoi_work"))
         try:
             log.debug("delete temporary workspace: %s" % workspace_gdb)
             gp.delete(workspace_gdb)
-
             log.info("workspace deleted")
         except:
             log.debug("failed to delete %s" % workspace_gdb)
