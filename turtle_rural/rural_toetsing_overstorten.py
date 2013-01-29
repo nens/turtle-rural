@@ -105,13 +105,18 @@ def main():
             log.info(" - add field %s" % config.get('toetsing_overstorten', 'field_waterstand'))
             gp.addfield(temp_voronoi, "%s" % config.get('toetsing_overstorten', 'field_waterstand'), "double")
 
+        
         # copy waterlevel to voronoi polygons
+        field_config_waterstand = config.get('toetsing_overstorten', 'field_waterstand').lower()
+        field_calculation_point_ident = config.get('toetsing_overstorten', 'calculation_point_ident')
+        
         rows = gp.UpdateCursor(temp_voronoi)
         for row in nens.gp.gp_iterator(rows):
-            row_id = row.GetValue(config.get('toetsing_overstorten', 'calculation_point_ident'))
+            row_id = row.GetValue(field_calculation_point_ident)
+            
             if waterlevel_dict.has_key(row_id):
                 log.debug(waterlevel_dict[row_id])
-                row.SetValue(config.get('toetsing_overstorten', 'field_waterstand'), waterlevel_dict[row_id][config.get('toetsing_overstorten', 'field_waterstand').lower()])
+                row.SetValue(field_config_waterstand, waterlevel_dict[row_id][field_config_waterstand])
 
                 rows.UpdateRow(row)
 
@@ -119,8 +124,9 @@ def main():
         # Join external weirs to voronoi using spatial location (spatial join)
         log.info("join waterlevel to external weirs using a spatial location")
         temp_spatial_join = turtlebase.arcgis.get_random_file_name(workspace_gdb)
-        gp.SpatialJoin_analysis(input_external_weir, temp_voronoi, temp_spatial_join, "JOIN_ONE_TO_ONE", "#", "#", "INTERSECTS")
-
+        #gp.SpatialJoin_analysis(input_external_weir, temp_voronoi, temp_spatial_join, "JOIN_ONE_TO_ONE", "#", "#", "INTERSECTS")
+        gp.Intersect_Analysis(input_external_weir + ';' + temp_voronoi, temp_spatial_join)
+        
         external_weir_dict = nens.gp.get_table(gp, temp_spatial_join, primary_key=config.get('toetsing_overstorten', 'overstort_ident').lower())
 
         result_dict = {}
