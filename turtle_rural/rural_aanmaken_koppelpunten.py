@@ -89,8 +89,11 @@ def calculate_minimal_distance_between_points(gp, peilgebieden_centroides_dict, 
                 punt_y = float(waterlijnen_vertex_dict[peilgebied][punt_op_waterlijn].Y)
                 #punt_y = waterlijnen_vertex_dict[peilgebied][punt_op_waterlijn].Y
                 #log.info(peilgebieden_centroides_dict[peilgebied])
-                centroid_x = float(peilgebieden_centroides_dict[peilgebied]['centroid'].X)
-                centroid_y = float(peilgebieden_centroides_dict[peilgebied]['centroid'].Y)
+                
+                centroid_x, centroid_y = turtlebase.arcgis.calculate_xy(gp, peilgebieden_centroides_dict[peilgebied]['centroid'])
+                
+                #centroid_x = float(peilgebieden_centroides_dict[peilgebied]['centroid'].X)
+                #centroid_y = float(peilgebieden_centroides_dict[peilgebied]['centroid'].Y)
                 #centroid_y = peilgebieden_centroides_dict[peilgebied].Y
                 #calculate_distance
                 distance = calculate_distance(punt_x, punt_y, centroid_x, centroid_y)
@@ -116,13 +119,17 @@ def create_point_file_from_dict(gp, centroid_dict, output_centroid_file, peilgeb
     gp.Addfield_management(output_centroid_file, peilgebied_id, "TEXT")
     rows_out = gp.InsertCursor(output_centroid_file)
     pnt = gp.CreateObject("Point")
+    log.info(centroid_dict)
     for peilgebied in centroid_dict:
+        log.info(peilgebied)
         newfeat = rows_out.NewRow()
         #log.info(centroid_dict[peilgebied])
         #punt = centroid_dict[peilgebied].X
         #log.info(centroid_dict[peilgebied])
-        pnt.X = centroid_dict[peilgebied].X
-        pnt.Y = centroid_dict[peilgebied].Y
+        log.info(isinstance(centroid_dict[peilgebied],str) )
+        pnt.X, pnt.Y= turtlebase.arcgis.calculate_xy(gp,centroid_dict[peilgebied])
+        #pnt.X = centroid_dict[peilgebied].X
+        #pnt.Y = centroid_dict[peilgebied].Y
 
         newfeat.shape = pnt
         newfeat.SetValue(peilgebied_id, peilgebied)
