@@ -11,6 +11,7 @@ from turtlebase.logutils import LoggingConfig
 from turtlebase import mainutils
 import nens.gp
 import turtlebase.arcgis
+import turtlebase.filenames
 
 log = logging.getLogger(__name__)
 
@@ -206,16 +207,18 @@ def create_dict_stars_around_rekenpunten(peilgebieden_list, config, rekenpunten_
     dict_points_for_star = {}
 
     count = 0
+    
+    tot = int(config.get('bergingstakken', 'numb_of_lines_opt_breach'))
+    
     for peilgebiedid in peilgebieden_list.keys():
         if rekenpunten_x_y_coordinaten.has_key(peilgebiedid):
             xcoord, ycoord = rekenpunten_x_y_coordinaten[peilgebiedid].split(' ')
-
             #length = int(config.get('zijtakken', 'length_of_breach'))
-            tot = int(config.get('zijtakken', 'numb_of_lines_opt_breach'))
+            
             for i in range(tot):
                 alpha = float(i) / tot * 2 * math.pi
-                dX = int(config.get('zijtakken', 'length_of_breach')) * math.sin(alpha)
-                dY = int(config.get('zijtakken', 'length_of_breach')) * math.cos(alpha)
+                dX = int(config.get('bergingstakken', 'length_of_breach')) * math.sin(alpha)
+                dY = int(config.get('bergingstakken', 'length_of_breach')) * math.cos(alpha)
                 x = float(xcoord) + float(dX)
                 y = float(ycoord) + float(dY)
                 count = count + 1
@@ -232,10 +235,11 @@ def bepalen_x_y_coordinaat_meerdere_punten(gp, punten_shape, field_containing_ke
     row = gp.SearchCursor(punten_shape)
     for item in nens.gp.gp_iterator(row):
         key = item.getValue(field_containing_key)
+        
         punt = item.shape.centroid
+        punt_x, punt_y = turtlebase.arcgis.calculate_xy(gp, punt)
         #punt_spl = punt.split()
-        punt_x = float(punt.X)
-        punt_y = float(punt.Y)
+        
         punt = '%.5f' % (punt_x) + " " + '%.5f' % (punt_y)
 
         if not output_dict.has_key(key):
@@ -251,9 +255,10 @@ def bepalen_x_y_coordinaat(gp, punten_shape, field_containing_key):
     for item in nens.gp.gp_iterator(row):
         key = item.getValue(field_containing_key)
         punt = item.shape.centroid
+        punt_x, punt_y = turtlebase.arcgis.calculate_xy(gp, punt)
         #punt_spl = punt.split()
-        punt_x = float(punt.X)
-        punt_y = float(punt.Y)
+        #punt_x = float(punt.X)
+        #punt_y = float(punt.Y)
         punt = '%.5f' % (punt_x) + " " + '%.5f' % (punt_y)
 
 
@@ -337,8 +342,7 @@ def main():
         intersect = turtlebase.arcgis.get_random_file_name(workspace_gdb)
         log.info("Bereken kruisingen van potentiele bergingstakken met waterlijnen")
         #Buffer_analysis (in_features, out_feature_class, buffer_distance_or_field, line_side, line_end_type, dissolve_option, dissolve_field)
-        log.info(star)
-        log.info(waterlijnen_lokaal)
+       
         gp.Intersect_analysis(star + ";" + waterlijnen_lokaal, intersect, "#", "#", "POINT")
         intersect_x_y_coordinaten = bepalen_x_y_coordinaat(gp, intersect, gpgident)
 
@@ -361,7 +365,7 @@ def main():
         log.debug("Als eerste wordt een buffer aangemaakt ")
 
         buffer_star = turtlebase.arcgis.get_random_file_name(workspace_gdb)
-        gp.Buffer_analysis(rekenpunten, buffer_star, int(config.get('zijtakken', 'length_of_breach')))
+        gp.Buffer_analysis(rekenpunten, buffer_star, int(config.get('bergingstakken', 'length_of_breach')))
         snijpunt_waterlijn = turtlebase.arcgis.get_random_file_name(workspace_gdb)
 
         log.debug("Nu intersect van de buffer met de waterlijnen. Deze punten worden gebruikt om de afstand naar de waterlijn te berekenen ")
@@ -390,17 +394,25 @@ def main():
         #intersect van star met zichzelf. als er iets overblijft dan geef een warning met de betreffende peilgebied id, mededeling
         # voor de gebruiker dat hij/zij daar even handmatig wat aan aan moet passen.
         log.info("Creeeren out_shape bergingstakken")
+        log.info('%s  star' %star)
+        log.info('%s  star'% output_bergingstakken)
         gp.select_analysis(star, output_bergingstakken)
 
-        log.info("Check of er bergingstakken zijn die overlappen ")
-        intersect3 = turtlebase.arcgis.get_random_file_name(workspace_gdb)
-        gp.Intersect_analysis(output_bergingstakken, intersect3, "#", "#", "POINT")
-        #loop door de output van de intersect en geeft de GPGident weer als deze in de attribute table staat
-        row = gp.SearchCursor(intersect3)
-        for item in nens.gp.gp_iterator(row):
-            gpg_ident = item.getValue(gpgident)
-            log.warning("In peilgebied " + str(gpg_ident) + " overlapt de bergingstak met een andere bergingstak. Pas dit handmatig aan!")
 
+        
+        
+        log.info("Check of er bergingstakken zijn die overlappen ")
+        try:
+            intersect3 = turtlebase.arcgis.get_random_file_name(workspace_gdb)
+            gp.Intersect_analysis(output_bergingstakken, intersect3, "#", "#", "POINT")
+            #loop door de output van de intersect en geeft de GPGident weer als deze in de attribute table staat
+            row = gp.SearchCursor(intersect3)
+            for item in nens.gp.gp_iterator(row):
+                gpg_ident = item.getValue(gpgident)
+                log.warning("In peilgebied " + str(gpg_ident) + " overlapt de bergingstak met een andere bergingstak. Pas dit handmatig aan!")
+        except (RuntimeError, TypeError, NameError):
+            log.info('Geen overlap aanwezig')    
+            
         #----------------------------------------------------------------------------------------
         # Delete temporary workspace geodatabase & ascii files
         try:
