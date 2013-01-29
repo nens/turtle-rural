@@ -119,7 +119,6 @@ def main(options=None, args=None):
     env = Environment(loader=PackageLoader('__main__', resources_dir))
     env.filters['pyformat'] = do_pyformat
     env.filters['filter_material'] = do_material
-    env.filters['filter_form'] = do_form
     env.filters['filter_isknown'] = do_isknown
     template_svg = env.get_template('duiker.svg')
 
@@ -148,7 +147,7 @@ def main(options=None, args=None):
                 svg_info[field] = ""
         if isinstance(svg_info['date'], datetime):
             svg_info['date'] = svg_info['date'].strftime('%Y-%m-%d')
-        svg_info['has_diametre'] = (do_form(svg_info['form']) in ['rond'])
+        svg_info['has_diametre'] = (svg_info['profile_shape'] in ['rond'])
 
         svg_data = template_svg.render(svg_info)
         filename = os.path.join(output_graphs, svg_info['name'] + ".svg")
@@ -157,8 +156,8 @@ def main(options=None, args=None):
         out.close()
 
     location_svg = output_graphs + "\\*.svg"
-    log.info('.\\batik\\convert_svg_to_png.bat %s' % location_svg)
-    os.system('.\\batik\\convert_svg_to_png.bat %s' % location_svg)
+    log.info('%s\\batik\\convert_svg_to_png.bat %s' % (os.path.dirname(sys.argv[0]), location_svg))
+    os.system('%s\\batik\\convert_svg_to_png.bat %s' % (os.path.dirname(sys.argv[0]), location_svg))
 
     # Create CSV files
     output_csv = os.path.join(output_dir, "csv")

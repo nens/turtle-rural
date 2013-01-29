@@ -428,8 +428,6 @@ def main():
                     if not turtlebase.arcgis.is_fieldname(gp, output_crop_table, field_name):
                         gp.AddField(output_crop_table, field_name, field_settings['type'])
                         
-
-            log.info(output_gewas_areas)
             write_result_to_output(gp, output_crop_table, gpgident.lower(), output_gewas_areas)
         #----------------------------------------------------------------------------------------
         # Delete temporary workspace geodatabase & ascii files

@@ -49,11 +49,8 @@ def main():
         input_check_bound_lower = float(config.get('OppervlakteParameters', 'input_check_bound_lower'))
         input_check_bound_upper = float(config.get('OppervlakteParameters', 'input_check_bound_upper'))
 
-        rows = gp.UpdateCursor(input_oppervlak)
-        if input_gewassen != '#':
-            rows_gw = gp.UpdateCursor(input_gewassen)
-            row_gw = rows_gw.next()
-            
+        rr_oppervlak_dict = {}
+        rows = gp.UpdateCursor(input_oppervlak)    
         row = rows.next()
         while row:
             ident = row.GetValue(gpgident_field)
@@ -68,15 +65,14 @@ def main():
                 onvsted = 0
             onvland = row.GetValue(onvland_field)
             if onvland is None:
-                onvland = 0
-            
+                onvland = 0                            
             kassen = row.GetValue(kassen_field)
             if kassen is None:
                 kassen = 0
             openwat = row.GetValue(openwat_field)
             if openwat is None:
                 openwat = 0
-
+            
             opm_correc = ""
 
             if openwat < float(config.get('OppervlakteParameters', 'input_check_min_openwater_ha')):
@@ -120,6 +116,7 @@ def main():
             row.SetValue(onvsted_field, onvsted)
             row.SetValue(kassen_field, kassen)
             row.SetValue(openwat_field, openwat)
+            rr_oppervlak_dict[ident] = {"onverhard stedelijk": onvsted, "onverhard landelijk": onvland}
 
             if len(opm_correc) > 50:
                 opm_correc = opm_correc[:50]
@@ -128,7 +125,53 @@ def main():
             rows.UpdateRow(row)
             row = rows.next()
             
+        del rows
         del row
+                
+        if input_gewassen != "#":
+            crop_fields = [config.get('OppervlakteParameters', 'grass_area'),
+                           config.get('OppervlakteParameters', 'corn_area'),
+                           config.get('OppervlakteParameters', 'potatoes_area'),
+                           config.get('OppervlakteParameters', 'sugarbeet_area'),
+                           config.get('OppervlakteParameters', 'grain_area'),
+                           config.get('OppervlakteParameters', 'miscellaneous_area'),            
+                           config.get('OppervlakteParameters', 'greenhouse_area'),
+                           config.get('OppervlakteParameters', 'orchard_area'),
+                           config.get('OppervlakteParameters', 'bulbous_plants_area'),
+                           config.get('OppervlakteParameters', 'foliage_forest_area'),
+                           config.get('OppervlakteParameters', 'pine_forest_area'),
+                           config.get('OppervlakteParameters', 'nature_area'),
+                           config.get('OppervlakteParameters', 'fallow_area'),
+                           config.get('OppervlakteParameters', 'vegetables_area'),
+                           config.get('OppervlakteParameters', 'flowers_area')]
+            
+            nonarab_field = config.get('OppervlakteParameters', 'nonarable_land_area')
+            
+            rows = gp.UpdateCursor(input_gewassen)    
+            row = rows.next()
+            while row:
+                ident = row.GetValue(gpgident_field)
+                correct_onvsted_ha = float(rr_oppervlak_dict[ident]['onverhard stedelijk'])
+                correct_onvland_ha = float(rr_oppervlak_dict[ident]['onverhard landelijk'])
+                
+                row.SetValue(nonarab_field, correct_onvsted_ha)
+
+                total_crop_area = 0
+                for crop_field in crop_fields:
+                    total_crop_area += (float(row.GetValue(crop_field)))
+                                        
+                percentage = correct_onvland_ha / total_crop_area
+                log.info(percentage)
+                for crop_field in crop_fields:
+                    original_ha = float(row.GetValue(crop_field))
+                    new_ha = original_ha * percentage
+                    row.SetValue(crop_field, new_ha)
+                rows.UpdateRow(row)
+                row = rows.next()
+                
+            del rows
+            del row
+                
         mainutils.log_footer()
 
     except:
