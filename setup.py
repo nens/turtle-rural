@@ -14,6 +14,7 @@ install_requires = [
     'pkginfo',
     'setuptools',
     'turtlebase',
+	'jinja2',
     ],
 
 tests_require = [
