@@ -386,7 +386,7 @@ def main():
         out_data = turtlebase.arcgis.get_random_file_name(workspace_gdb)
         gp.Copy_management (star, out_data)
 
-        log.info("Verwijder de bergsingstakken die niet het verst van de waterlijn afliggen ")
+        log.info("Selecteer de bergingstakken die loodrecht op waterlijn staan")
         remove_records_from_shapefile_not_in_list(gp, star, gpgident, list_with_ideal_points)
         #koppel de lijnen aan de RR_oppervlak tabel en neem de openwat_HA waarden over
         log.debug("De gpgident wordt weer teruggehaald ui de unieke peilgebiedid")
