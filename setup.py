@@ -80,6 +80,6 @@ setup(name='turtle-rural',
 			'rural_waterbalance = turtle_rural.rural_waterbalance:main',
 			'rural_controle_duikers = turtle_rural.rural_controle_duikers:main',
 			'rural_aanwezigheid_peilscheidingen = turtle_rural.rural_aanwezigheid_peilscheidingen:main',
-            'rural_abc_watergangen = turtle_rural.rural_abc_watergangen.py:main',
+            'rural_abc_watergangen = turtle_rural.rural_abc_watergangen:main',
           ]},
       )
