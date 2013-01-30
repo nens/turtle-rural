@@ -48,7 +48,15 @@ def create_output_table(gp, output_surface_table, area_ident, field_range):
                 gp, output_surface_table, 'COMMENTS'):
         gp.addfield_management(output_surface_table,
                 'COMMENTS', "Text", "#", "#", '256')
-        
+
+
+def get_layer_full_path(gp, layer):
+    desc = gp.Describe(layer)
+    path = desc.path
+    full_path = os.path.join(path, layer)
+    
+    return full_path
+
 
 def main():
     try:
@@ -79,19 +87,31 @@ def main():
         nodig voor deze tool:
         """
         if len(sys.argv) == 7:
-            peilgebieden = sys.argv[1]
-            rr_peilgebied = sys.argv[2]
-            hoogtekaart = sys.argv[3]
-            landgebruik = sys.argv[4]
-            conversietabel = sys.argv[5]
-            rr_maaiveld = sys.argv[6]            
+            peilgebieden = get_layer_full_path(gp, sys.argv[1])
+            rr_peilgebied = get_layer_full_path(gp, sys.argv[2])
+            hoogtekaart = get_layer_full_path(gp, sys.argv[3])
+            log.info(sys.argv[4])
+            if sys.argv[4] != '#':
+                landgebruik = get_layer_full_path(gp, sys.argv[4])
+            else:
+                landgebruik = '#'
+        
+            if sys.argv[5] != '#':
+                conversietabel = get_layer_full_path(gp, sys.argv[5])
+            else:
+                conversietabel = '#'
+            rr_maaiveld = get_layer_full_path(gp, sys.argv[6])    
         else:
             log.warning("usage: <argument1> <argument2>")
             sys.exit(1)
             
+        log.info(peilgebieden)
+                    
         kaartbladen = os.path.join(os.path.dirname(sys.argv[0]), "kaartbladen", "kaartbladen.shp")
         gpgident = config.get('general', 'gpgident')
         mv_procent = config.get("maaiveldkarakteristiek", "mv_procent")
+        lgn_code = config.get('maaiveldkarakteristiek', 'lgn_code')
+        nbw_klasse = config.get('maaiveldkarakteristiek', 'nbw_klasse')
 
         #---------------------------------------------------------------------
         # Environments
@@ -100,6 +120,8 @@ def main():
         gp.SelectLayerByLocation_management("krtbldn_lyr","INTERSECT","gpg_lyr","#","NEW_SELECTION")
         kaartbladen_prj = turtlebase.arcgis.get_random_file_name(workspace, '.shp')
         gp.Select_analysis("krtbldn_lyr", kaartbladen_prj)
+        peilgebieden_shp = turtlebase.arcgis.get_random_file_name(workspace, '.shp')
+        gp.Select_analysis("gpg_lyr", peilgebieden_shp)
 
         streefpeilen = {}
         rows_gpg = gp.SearchCursor(rr_peilgebied)
@@ -110,23 +132,37 @@ def main():
             streefpeilen[gpg_id] = streefpeil
             row_gpg = rows_gpg.next()
             
+        conversion = {}
+        if conversietabel != '#':
+            rows_conv = gp.SearchCursor(conversietabel)
+            row_conv = rows_conv.next()
+            while row_conv:
+                lgn = row_conv.GetValue(lgn_code)
+                nbw = row_conv.GetValue(nbw_klasse)
+                conversion[lgn] = nbw
+                row_conv = rows_conv.next()
+                
         rows = gp.SearchCursor(peilgebieden)
         row = rows.next()
         mvcurve_dict = {}
-        nbw_dict = {}
+
+        #nbw_dict = {}
         while row:
             gpg_value = row.getValue(gpgident)
             gpg_lyr = turtlebase.arcgis.get_random_layer_name()
-            gp.MakeFeatureLayer_management(peilgebieden, gpg_lyr, "%s = '%s'" % ('"' + gpgident + '"', gpg_value))
+            gp.MakeFeatureLayer_management(peilgebieden_shp, gpg_lyr, "%s = '%s'" % ('"' + gpgident + '"', gpg_value))
             tmp_gpg = turtlebase.arcgis.get_random_file_name(workspace, '.shp')
-            gp.Select_analysis(gpg_value, tmp_gpg)
+            gp.Select_analysis(gpg_lyr, tmp_gpg)
         
             streefpeil = float(streefpeilen[gpg_value])
-            curve = maaiveldcurve.main(tmp_gpg, kaartbladen_prj, landgebruik, hoogtekaart, streefpeil, conversietabel, workspace)
+            curve = maaiveldcurve.main(tmp_gpg, kaartbladen_prj, landgebruik, hoogtekaart, streefpeil, conversion, workspace)
             log.info(curve)
             mvcurve_dict[gpg_value] = {gpgident: gpg_value}
-            for i in mv_procent:
-                mvcurve_dict[gpg_value]["MV_HGT_%s" % i] = curve[0][1][i]
+            
+            for i in mv_procent.split(', '):
+                log.info(i)
+                log.info(curve[0][1][int(i)])
+                mvcurve_dict[gpg_value]["MV_HGT_%s" % i] = curve[0][1][int(i)]
             if landgebruik != '#':
                 log.info("stedelijk %s" % curve[1][1][1])
                 log.info("hoogwaardig %s" % curve[2][1][1])
@@ -135,12 +171,11 @@ def main():
                 
             gp.delete(tmp_gpg)
             row = rows.next()
-        
+        log.info(mvcurve_dict)
         #---------------------------------------------------------------------
-        
-        
+                
         turtlebase.arcgis.write_result_to_output(rr_maaiveld, gpgident, mvcurve_dict)
-        turtlebase.arcgis.write_result_to_output(rr_maaiveld, gpgident, nbw_dict)
+        #turtlebase.arcgis.write_result_to_output(rr_maaiveld, gpgident, nbw_dict)
         #---------------------------------------------------------------------
         # Delete temporary workspace geodatabase & ascii files
         gp.delete(kaartbladen_prj)

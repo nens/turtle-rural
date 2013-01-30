@@ -4,9 +4,10 @@ from osgeo import gdal
 import numpy as np
 
 import os
-import shutil
-import tempfile
 import subprocess
+import arcgisscripting
+gp = arcgisscripting.create()
+
 
 def get_mapsheets(mask_fc, i_mapsheets, mapsheets_key, workspace):
     """
@@ -23,6 +24,7 @@ def get_mapsheets(mask_fc, i_mapsheets, mapsheets_key, workspace):
     gp.SelectLayerByLocation_management("mapsheets_lyr","INTERSECT","mask_lyr","#","NEW_SELECTION")
     
     mapsheets_tmp = turtlebase.arcgis.get_random_file_name(workspace, '.shp')
+    gp.AddMessage(mapsheets_tmp)
     gp.Select_analysis("mapsheets_lyr", mapsheets_tmp)
     rows = gp.searchcursor(mapsheets_tmp)
     row = rows.next()
@@ -55,18 +57,18 @@ def get_mapsheets_gdal(mask_fc, i_mapsheets, mapsheets_key):
     return mapsheets
 
 
-def get_array_from_grid(mask_fc, mapsheet, tiff_template, input_grid, extent, workspace, NODATA=-9999):
+def get_array_from_grid(mask_fc, mapsheet, input_grid, extent, workspace, NODATA=-9999):
     """ Return height array with values outside mask set to NODATA. """
     output_tiff = os.path.join(workspace, mapsheet)
     turtle_base_dir = os.environ['TURTLE_BASE_DIR']
     
     gdal_dir = os.path.join(turtle_base_dir, 'gdal')
-    gdalwarp_exe = "%s" % os.path.join(gdal_dir, 'gdalwarp.exe')
+    gdalwarp_exe = os.path.join(gdal_dir, 'gdalwarp.exe')
 
     if not os.path.isfile(os.path.join(gdal_dir, 'gdalwarp.exe')):
         raise Exception('gdalwarp.exe not found')
-
-    args = [gdalwarp_exe, input_grid, output_tiff, "-cutline", mask_fc, "-te", extent, "-ts", "2000", "2500", "-dstnodata", NODATA, "-q"]
+    xmin, ymin, xmax, ymax = extent.split(' ')
+    args = [gdalwarp_exe, input_grid, output_tiff, "-cutline", mask_fc, "-te", str(xmin), str(ymin), str(xmax), str(ymax), "-ts", "2000", "2500", "-dstnodata", str(NODATA), "-q"]
     proc = subprocess.Popen(args,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
     stdout,stderr=proc.communicate()
     exit_code=proc.wait()
@@ -86,10 +88,9 @@ def get_array_from_grid(mask_fc, mapsheet, tiff_template, input_grid, extent, wo
 
 
 
-def reclassify_array(array, NODATA=-9999):
+def reclassify_array(array, conversion, NODATA=-9999):
     """
     """
-    conversion = {1:2, 2:3, 3:4, 4:5, 5:0}
     nbw_array = np.ones(array.shape) * NODATA
     
     for k, v in conversion.items():
@@ -108,8 +109,6 @@ def get_groundcurve(histogram, bins_right):
 
 
 def main(mask_fc, mapsheets, landgebruik, hoogtekaart, streefpeil, conversion, workspace):
-    tiff_template = os.path.join(workspace, '%(mapsheet)s.tiff')
-    
     mapsheets_key = 'BLADNR'
     NODATA = -9999
     
@@ -129,7 +128,7 @@ def main(mask_fc, mapsheets, landgebruik, hoogtekaart, streefpeil, conversion, w
     # Loop mapsheets and add to histogram
     for (mapsheet, extent) in get_mapsheets(mask_fc, mapsheets, mapsheets_key, workspace):
         # Get data and index mask
-        height_array = get_array_from_grid(mask_fc, mapsheet, tiff_template, hoogtekaart, extent, workspace, NODATA=NODATA)
+        height_array = get_array_from_grid(mask_fc, mapsheet, hoogtekaart, extent, workspace, NODATA=NODATA)
         index_mask = height_array != NODATA
         
         # Determine histogram for this mapsheet and add to total histogram
@@ -137,8 +136,8 @@ def main(mask_fc, mapsheets, landgebruik, hoogtekaart, streefpeil, conversion, w
         histogram += mapsheet_histogram
         
         if landgebruik != '#':
-            landuse_array = get_array_from_grid(mask_fc, mapsheet, tiff_template, landgebruik, extent, workspace, NODATA=NODATA)
-            nbw_array = reclassify_array(landuse_array, NODATA=-9999)
+            landuse_array = get_array_from_grid(mask_fc, mapsheet, landgebruik, extent, workspace, NODATA=NODATA)
+            nbw_array = reclassify_array(landuse_array, conversion, NODATA=NODATA)
             # Determine histogram per landuse
             mapsheet_histogram_per_landuse = {}
             landuses = np.unique(nbw_array[index_mask])
