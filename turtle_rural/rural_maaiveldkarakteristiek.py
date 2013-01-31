@@ -4,13 +4,14 @@
 import logging
 import sys
 import os
-import shutil
 import traceback
 
 from turtlebase.logutils import LoggingConfig
 from turtlebase import mainutils
+import nens.gp
 import turtlebase.arcgis
-import maaiveldcurve
+import arcpy
+import numpy
 
 log = logging.getLogger(__name__)
 
@@ -50,12 +51,29 @@ def create_output_table(gp, output_surface_table, area_ident, field_range):
                 'COMMENTS', "Text", "#", "#", '256')
 
 
-def get_layer_full_path(gp, layer):
-    desc = gp.Describe(layer)
-    path = desc.path
-    full_path = os.path.join(path, layer)
-    
-    return full_path
+def add_integer_ident(gp, temp_level_area, id_int_field, area_ident):
+    """a
+    """
+    log.debug(" - update records")
+    if not turtlebase.arcgis.is_fieldname(gp, temp_level_area, id_int_field):
+        log.debug(" - add field %s" % id_int_field)
+        gp.addfield_management(temp_level_area, id_int_field, "Short")
+
+    row = gp.UpdateCursor(temp_level_area)
+    x = 1
+    area_id_dict = {}
+
+    for item in nens.gp.gp_iterator(row):
+        item_id = item.GetValue(area_ident)
+        if item_id in area_id_dict:
+            item.SetValue(id_int_field, area_id_dict[item_id][id_int_field])
+        else:
+            item.SetValue(id_int_field, x)
+            area_id_dict[item_id] = {id_int_field: x}
+            x += 1
+        row.UpdateRow(item)
+
+    return area_id_dict
 
 
 def main():
@@ -68,16 +86,14 @@ def main():
 
         #---------------------------------------------------------------------
         # Create workspace
-        workspace_folder = turtlebase.arcgis.get_random_layer_name()
-        workspace = os.path.join(config.get('GENERAL', 'location_temp'), workspace_folder)
-        os.makedirs(workspace)
+        workspace = config.get('GENERAL', 'location_temp')
 
         turtlebase.arcgis.delete_old_workspace_gdb(gp, workspace)
 
         if not os.path.isdir(workspace):
             os.makedirs(workspace)
         workspace_gdb, errorcode = turtlebase.arcgis.create_temp_geodatabase(
-                                        gp, workspace)
+                                                                gp, workspace)
         if errorcode == 1:
             log.error("failed to create a file geodatabase in %s" % workspace)
 
@@ -86,109 +102,144 @@ def main():
         """
         nodig voor deze tool:
         """
-        if len(sys.argv) == 7:
-            peilgebieden = get_layer_full_path(gp, sys.argv[1])
-            rr_peilgebied = get_layer_full_path(gp, sys.argv[2])
-            hoogtekaart = get_layer_full_path(gp, sys.argv[3])
-            log.info(sys.argv[4])
-            if sys.argv[4] != '#':
-                landgebruik = get_layer_full_path(gp, sys.argv[4])
-            else:
-                landgebruik = '#'
-        
-            if sys.argv[5] != '#':
-                conversietabel = get_layer_full_path(gp, sys.argv[5])
-            else:
-                conversietabel = '#'
-            rr_maaiveld = get_layer_full_path(gp, sys.argv[6])    
+        if len(sys.argv) == 5:
+            input_level_area_fc = sys.argv[1]
+            input_level_area_table = sys.argv[2]
+            input_ahn_raster = sys.argv[3]
+            output_surface_table = sys.argv[4]
         else:
-            log.warning("usage: <argument1> <argument2>")
+            log.error("usage: <input_level_area_fc> <input_level_area_table> \
+                    <input_ahn_raster> <output_surface_table>")
             sys.exit(1)
-            
-        log.info(peilgebieden)
-                    
-        kaartbladen = os.path.join(os.path.dirname(sys.argv[0]), "kaartbladen", "kaartbladen.shp")
-        gpgident = config.get('general', 'gpgident')
-        mv_procent = config.get("maaiveldkarakteristiek", "mv_procent")
-        lgn_code = config.get('maaiveldkarakteristiek', 'lgn_code')
-        nbw_klasse = config.get('maaiveldkarakteristiek', 'nbw_klasse')
 
+        #---------------------------------------------------------------------
+        # Check geometry input parameters
+        log.info("Check geometry of input parameters")
+        geometry_check_list = []
+
+        log.debug(" - check voronoi polygon: %s" % input_level_area_fc)
+        if gp.describe(input_level_area_fc).ShapeType != 'Polygon':
+            log.error("%s is not a polygon feature class!",
+                      input_level_area_fc)
+            geometry_check_list.append(input_level_area_fc + " -> (Polygon)")
+
+        if gp.describe(input_ahn_raster).PixelType[0] not in ['F']:
+            log.info(gp.describe(input_ahn_raster).PixelType)
+            log.error("Input AHN is an integer raster, \
+                    for this script a float is necessary")
+            geometry_check_list.append(input_ahn_raster + " -> (Float)")
+
+        if len(geometry_check_list) > 0:
+            log.error("check input: %s" % geometry_check_list)
+            sys.exit(2)
+
+        #---------------------------------------------------------------------
+        # Check required fields in input data
+        log.info("Check required fields in input data")
+
+        missing_fields = []
+
+        # <check required fields from input data,
+        # append them to list if missing>"
+        if not turtlebase.arcgis.is_fieldname(
+                            gp, input_level_area_fc, config.get(
+                            'maaiveldkarakteristiek',
+                            'input_peilgebied_ident')):
+            log.debug(" - missing: %s in %s" % (
+                    config.get('maaiveldkarakteristiek',
+                               'input_peilgebied_ident'), input_level_area_fc))
+            missing_fields.append("%s: %s" % (
+                    input_level_area_fc, config.get('maaiveldkarakteristiek',
+                                                    'input_peilgebied_ident')))
+        if not turtlebase.arcgis.is_fieldname(
+                            gp, input_level_area_table, config.get(
+                            'maaiveldkarakteristiek',
+                            'input_peilgebied_ident')):
+            log.debug(" - missing: %s in %s" % (
+                    config.get('maaiveldkarakteristiek',
+                               'input_peilgebied_ident'),
+                    input_level_area_table))
+            missing_fields.append("%s: %s" % (
+                            input_level_area_table, config.get(
+                                'maaiveldkarakteristiek',
+                                'input_peilgebied_ident')))
+
+        if len(missing_fields) > 0:
+            log.error("missing fields in input data: %s" % missing_fields)
+            sys.exit(2)
         #---------------------------------------------------------------------
         # Environments
-        gp.MakeFeatureLayer_management(kaartbladen, "krtbldn_lyr")
-        gp.MakeFeatureLayer_management(peilgebieden, "gpg_lyr")
-        gp.SelectLayerByLocation_management("krtbldn_lyr","INTERSECT","gpg_lyr","#","NEW_SELECTION")
-        kaartbladen_prj = turtlebase.arcgis.get_random_file_name(workspace, '.shp')
-        gp.Select_analysis("krtbldn_lyr", kaartbladen_prj)
-        peilgebieden_shp = turtlebase.arcgis.get_random_file_name(workspace, '.shp')
-        gp.Select_analysis("gpg_lyr", peilgebieden_shp)
+        log.info("Set environments")
+        #temp_level_area = os.path.join(workspace_gdb, "peilgebieden")
+        #gp.select_analysis(input_level_area_fc, temp_level_area)
+        # use extent from level area
+        #gp.extent = gp.describe(temp_level_area).extent
 
-        streefpeilen = {}
-        rows_gpg = gp.SearchCursor(rr_peilgebied)
-        row_gpg = rows_gpg.next()
-        while row_gpg:
-            gpg_id = row_gpg.getValue('gpgident')
-            streefpeil = row_gpg.getValue('zomerpeil')
-            streefpeilen[gpg_id] = streefpeil
-            row_gpg = rows_gpg.next()
-            
-        conversion = {}
-        if conversietabel != '#':
-            rows_conv = gp.SearchCursor(conversietabel)
-            row_conv = rows_conv.next()
-            while row_conv:
-                lgn = row_conv.GetValue(lgn_code)
-                nbw = row_conv.GetValue(nbw_klasse)
-                conversion[lgn] = nbw
-                row_conv = rows_conv.next()
-                
-        rows = gp.SearchCursor(peilgebieden)
-        row = rows.next()
-        mvcurve_dict = {}
-
-        #nbw_dict = {}
-        while row:
-            gpg_value = row.getValue(gpgident)
-            gpg_lyr = turtlebase.arcgis.get_random_layer_name()
-            gp.MakeFeatureLayer_management(peilgebieden_shp, gpg_lyr, "%s = '%s'" % ('"' + gpgident + '"', gpg_value))
-            tmp_gpg = turtlebase.arcgis.get_random_file_name(workspace, '.shp')
-            gp.Select_analysis(gpg_lyr, tmp_gpg)
-        
-            streefpeil = float(streefpeilen[gpg_value])
-            curve = maaiveldcurve.main(tmp_gpg, kaartbladen_prj, landgebruik, hoogtekaart, streefpeil, conversion, workspace)
-            log.info(curve)
-            mvcurve_dict[gpg_value] = {gpgident: gpg_value}
-            
-            for i in mv_procent.split(', '):
-                log.info(i)
-                log.info(curve[0][1][int(i)])
-                mvcurve_dict[gpg_value]["MV_HGT_%s" % i] = curve[0][1][int(i)]
-            if landgebruik != '#':
-                log.info("stedelijk %s" % curve[1][1][1])
-                log.info("hoogwaardig %s" % curve[2][1][1])
-                log.info("akkerbouw %s" % curve[3][1][1])
-                log.info("gras %s" % curve[4][1][5])
-                
-            gp.delete(tmp_gpg)
-            row = rows.next()
-        log.info(mvcurve_dict)
         #---------------------------------------------------------------------
-                
-        turtlebase.arcgis.write_result_to_output(rr_maaiveld, gpgident, mvcurve_dict)
-        #turtlebase.arcgis.write_result_to_output(rr_maaiveld, gpgident, nbw_dict)
+        rows = arcpy.SearchCursor(input_level_area_table)
+        surface_level = {}
+        for row in rows:
+            gpg_id = row.GPGIDENT
+            streefpeil = row.ZOMERPEIL
+            surface_level[gpg_id] = streefpeil
+
+        # create ahn ascii
+        log.info("Create array from ahn")
+        mv_procent_str = config.get('maaiveldkarakteristiek', 'mv_procent')
+        field_range = mv_procent_str.split(', ')
+
+        shapeName = arcpy.Describe(input_level_area_fc).shapeFieldName
+        in_rows = arcpy.SearchCursor(input_level_area_fc)
+        out_rows = arcpy.InsertCursor(output_surface_table)
+        for in_row in in_rows:
+            gpg_id = in_row.GPGIDENT
+            log.info("calculate s-curve for %s" % gpg_id)
+            streefpeil = float(surface_level[gpg_id])
+            peilgebied = in_row.getValue(shapeName)
+            ahn_temp = turtlebase.arcgis.get_random_file_name(workspace)
+            arcpy.env.pyramid = "NONE"
+            arcpy.Clip_management(input_ahn_raster, "#", ahn_temp, peilgebied, "#", "ClippingGeometry")
+
+            myArray = arcpy.RasterToNumPyArray(ahn_temp)
+            masked_array = myArray[myArray > -9999]
+            total_cells = len(masked_array)
+            boven_streefpeil = masked_array[masked_array > streefpeil]
+            beneden_streefpeil = masked_array[masked_array < streefpeil]
+            out_row = out_rows.newRow()
+            out_row.setValue("GPGIDENT", gpg_id)
+            if total_cells > 0:
+                procent_beneden_mv = (len(beneden_streefpeil) / total_cells) * 100
+                out_row.setValue("MV_Opm", "%s procent beneden streefpeil" % procent_beneden_mv)
+            if len(boven_streefpeil) > 0:
+                for p in field_range:
+                    percentage = numpy.percentile(boven_streefpeil, float(p))
+                    #log.info("percentage (%s): %s" % (p, percentage))
+                    out_row.setValue("MV_HGT_%s" % int(p), float(percentage))
+
+            out_rows.insertRow(out_row)
+
+            del myArray
+            del boven_streefpeil
+            del beneden_streefpeil
+
         #---------------------------------------------------------------------
         # Delete temporary workspace geodatabase & ascii files
-        gp.delete(kaartbladen_prj)
-
         try:
             log.debug("delete temporary workspace: %s" % workspace_gdb)
-            gp.delete(kaartbladen_prj)            
-            gp.delete(workspace_gdb)
+            #gp.delete(workspace_gdb)
+
             log.info("workspace deleted")
         except:
             log.warning("failed to delete %s" % workspace_gdb)
 
-        shutil.rmtree(workspace)
+        tempfiles = os.listdir(workspace)
+        for tempfile in tempfiles:
+            if tempfile.endswith('.asc'):
+                try:
+                    os.remove(os.path.join(workspace, tempfile))
+                except Exception, e:
+                    log.debug(e)
+
         mainutils.log_footer()
     except:
         log.error(traceback.format_exc())
