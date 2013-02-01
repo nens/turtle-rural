@@ -82,16 +82,6 @@ def main():
             rr_config.set("column.peilgebied", 'paved_runoff_coefficient', "-")
             rr_config.set("default.peilgebied", 'paved_runoff_coefficient', '0.2')
 
-        if not rr_config.get("column.peilgebied", 'grass_area'):
-            log.warning("grass_area not available in rr-settings, default 'ONVLAND_HA will be used")
-            rr_config.set("column.peilgebied", 'grass_area', "ONVLAND_HA")
-            rr_config.set("threshold.peilgebied", "grass_area", '0.001')
-
-        if not rr_config.get("column.peilgebied", 'nature_area'):
-            log.warning("nature_area not available in rr-settings, this field will be ignored")
-            rr_config.set("column.peilgebied", 'nature_area', "-")
-            rr_config.set("threshold.peilgebied", "nature_area", '0.001')
-
         #----------------------------------------------------------------------------------------
         #check input parameters
         log.info('Checking presence of input files')

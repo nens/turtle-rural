@@ -8,12 +8,8 @@ import logging
 import shutil
 import traceback
 
-# Import GIS modules
-import nens.gp
-
 # Import Turtlebase modules
 import turtlebase.arcgis
-import turtlebase.general
 from turtle_rural import trrrlib
 from turtlebase.logutils import LoggingConfig
 from turtlebase import mainutils
@@ -22,14 +18,19 @@ log = logging.getLogger(__name__)
 
 
 def add_xy_coords(gp, fc, xfield, yfield):
+    inDesc = gp.describe(fc)
     rows = gp.UpdateCursor(fc)
-    for row in nens.gp.gp_iterator(rows):
-        part = row.Shape.GetPart(0)
-        x_list = [float(pnt.x) for pnt in nens.gp.gp_iterator(part)]
-        row.SetValue(xfield, x_list[0])
-        y_list = [float(pnt.y) for pnt in nens.gp.gp_iterator(part)]
-        row.SetValue(yfield, y_list[0])
+    row = rows.next()
+    while row:
+        feat = row.GetValue(inDesc.ShapeFieldName)
+        x_coord, y_coord = turtlebase.arcgis.calculate_xy(gp,feat.centroid)
+        row.SetValue(xfield, x_coord)
+        row.SetValue(yfield, y_coord)
         rows.UpdateRow(row)
+        row = rows.next()
+        
+    del rows
+    del row
 
 
 def main():
@@ -76,16 +77,6 @@ def main():
             log.warning("paved_runoff_coefficient not available in rr-settings, default will be used")
             rr_config.set("column.peilgebied", 'paved_runoff_coefficient', "-")
             rr_config.set("default.peilgebied", 'paved_runoff_coefficient', '0.2')
-
-        if not rr_config.get("column.peilgebied", 'grass_area'):
-            log.warning("grass_area not available in rr-settings, default 'ONVLAND_HA will be used")
-            rr_config.set("column.peilgebied", 'grass_area', "ONVLAND_HA")
-            rr_config.set("threshold.peilgebied", "grass_area", '0.001')
-
-        if not rr_config.get("column.peilgebied", 'nature_area'):
-            log.warning("nature_area not available in rr-settings, this field will be ignored")
-            rr_config.set("column.peilgebied", 'nature_area', "-")
-            rr_config.set("threshold.peilgebied", "nature_area", '0.001')
 
         #----------------------------------------------------------------------------------------
         #check input parameters

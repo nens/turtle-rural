@@ -1,18 +1,21 @@
 # (c) Nelen & Schuurmans. GPL licensed, see LICENSE.txt
 # -*- coding: utf-8 -*-
 
-import logging
+# Import system modules
 import sys
 import os
+import logging
 import shutil
 import traceback
 
-from turtlebase.logutils import LoggingConfig
-from turtlebase import mainutils
+# Import GIS modules
 import nens.gp
+
+# Import Turtlebase modules
 import turtlebase.arcgis
 from turtle_rural import trrrlib
-import turtlebase.general
+from turtlebase.logutils import LoggingConfig
+from turtlebase import mainutils
 
 log = logging.getLogger(__name__)
 
@@ -85,16 +88,6 @@ def main():
             log.warning("paved_runoff_coefficient not available in rr+rrcf-settings, default will be used")
             rr_config.set("column.peilgebied", 'paved_runoff_coefficient', "-")
             rr_config.set("default.peilgebied", 'paved_runoff_coefficient', '0.2')
-
-        if not rr_config.get("column.peilgebied", 'grass_area'):
-            log.warning("grass_area not available in rr+rrcf-settings, default 'onvland_ha' will be used")
-            rr_config.set("column.peilgebied", 'grass_area', "onvland_ha")
-            rr_config.set("threshold.peilgebied", "grass_area", '0.001')
-
-        if not rr_config.get("column.peilgebied", 'nature_area'):
-            log.warning("nature_area not available in rr+rrcf-settings, this field will be ignored")
-            rr_config.set("column.peilgebied", 'nature_area', "-")
-            rr_config.set("threshold.peilgebied", "nature_area", '0.001')
 
         #----------------------------------------------------------------------------------------
         # Create workspace

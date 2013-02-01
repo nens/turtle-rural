@@ -10,7 +10,6 @@ from turtlebase.logutils import LoggingConfig
 from turtlebase import mainutils
 import nens.gp
 import turtlebase.arcgis
-import turtlebase.general
 
 log = logging.getLogger(__name__)
 
@@ -38,8 +37,8 @@ def create_line_from_dict(gp, workspace, dict_with_points, fields_to_add, new_ge
 
     linearray = gp.CreateObject("ARRAY")
     point = gp.CreateObject("POINT")
-    file = os.path.basename(outputfile)
-    gp.CreateFeatureClass_management(workspace, file, "POLYLINE")
+    filename = os.path.basename(outputfile)
+    gp.CreateFeatureClass_management(workspace, filename, "POLYLINE")
 
     for field_to_add in fields_to_add:
         field_name = field_to_add[0]
@@ -279,10 +278,8 @@ def main():
         tempfiles.append(temp_shape)
 
         #creates new lines in workspace with same name as output_shape
-        log.info(count)
         count = create_line_from_dict(gp, workspace_gdb, new_feat, fields_to_add, new_geometry, temp_shape)
-        log.info(count)
-
+        
         if count == 0:
             log.warning("Er zijn geen lijnen omgedraaid")
             log.warning("Door de gebruiker is in de kolom " + str(flip_field) + " geen 1 ingevuld")

@@ -5,6 +5,7 @@ import logging
 import sys
 import os
 import shutil
+import math
 import traceback
 
 from turtlebase.logutils import LoggingConfig
@@ -120,7 +121,7 @@ def main():
         if landgebruik != '#':
             if conversietabel == '#':
                 log.error("When you use a landuse map, a conversion table is required!")
-                sys.exit[1]
+                sys.exit(2)
             if rr_toetspunten == '#':
                 rr_toetspunten = os.path.join(workspace_gdb, "rr_toetspunten")
                 log.warning("You did not specify a output table for the RR_TOETSPUNTEN")
@@ -129,6 +130,31 @@ def main():
         
         #---------------------------------------------------------------------
         # Environments
+        geometry_check_list = []
+        if gp.describe(hoogtekaart).PixelType[0] not in ['F']:
+            log.info(gp.describe(hoogtekaart).PixelType)
+            log.error("Input AHN is an integer raster, for this script a float is required")
+            geometry_check_list.append(hoogtekaart + " -> (Float)")
+            
+        if landgebruik != '#':
+            if gp.describe(landgebruik).PixelType[0] in ['F']:
+                log.info(gp.describe(landgebruik).PixelType)
+                log.error("Input landgebruik is a float raster, for this script a integer is required")
+                geometry_check_list.append(hoogtekaart + " -> (Float)")
+            
+            cellsize_ahn = gp.describe(hoogtekaart).MeanCellHeight
+            cellsize_landgebruik = gp.describe(landgebruik).MeanCellHeight
+            if not cellsize_ahn == cellsize_landgebruik:
+                log.error("The cellsize of input AHN2 is %s, the cellsize of landuse is %s. They should be the same" % (
+                                                                                                                       cellsize_ahn,
+                                                                                                                       cellsize_landgebruik))
+                geometry_check_list.append("Change cellsize of %s" % landgebruik)
+        
+        if len(geometry_check_list) > 0:
+            log.error("check input: %s" % geometry_check_list)
+            sys.exit(2)
+
+            
         gp.MakeFeatureLayer_management(kaartbladen, "krtbldn_lyr")
         gp.MakeFeatureLayer_management(peilgebieden, "gpg_lyr")
         gp.SelectLayerByLocation_management("krtbldn_lyr","INTERSECT","gpg_lyr","#","NEW_SELECTION")
@@ -159,6 +185,7 @@ def main():
         rows = gp.SearchCursor(peilgebieden)
         row = rows.next()
         mvcurve_dict = {}        
+        maxpeil = float(config.get('maaiveldkarakteristiek', 'max_hoogte'))
         
         if landgebruik != '#':
             nbw_dict = {}
@@ -180,11 +207,12 @@ def main():
             gp.Select_analysis(gpg_lyr, tmp_gpg)
         
             streefpeil = float(streefpeilen[gpg_value])
-            curve, curve_per_landuse = maaiveldcurve.main(tmp_gpg, kaartbladen_prj, landgebruik, hoogtekaart, streefpeil, conversion, workspace_shp)
+            curve, curve_per_landuse = maaiveldcurve.main(tmp_gpg, kaartbladen_prj, landgebruik, hoogtekaart, streefpeil, maxpeil, conversion, workspace_shp)
             mvcurve_dict[gpg_value] = {gpgident: gpg_value}
             
             for i in mv_procent.split(', '):
-                mvcurve_dict[gpg_value]["MV_HGT_%s" % i] = curve[0][1][int(i)]
+                v = curve[0][1][int(i)]
+                mvcurve_dict[gpg_value]["MV_HGT_%s" % i] = math.ceil(v*100)/100
             
             if landgebruik != '#':
                 nbw_dict[gpg_value] = {gpgident: gpg_value}

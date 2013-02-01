@@ -30,14 +30,14 @@ def clean_up_star(gp, shapefile, field_to_clean):
         row.UpdateRow(item)
 
 
-def remove_records_from_shapefile_not_in_list(gp, shapefile, field, list):
+def remove_records_from_shapefile_not_in_list(gp, shapefile, field, remove_records):
     '''Doet een loop door de attribute tabel van een shapefile. Als er in field een waarde staat die niet voorkomt in list, wordt
     het record verwijderd.
     '''
     row = gp.UpdateCursor(shapefile)
     for item in nens.gp.gp_iterator(row):
         common_id = item.getValue(field)
-        if not common_id in list:
+        if not common_id in remove_records:
             row.DeleteRow(item)
 
 
@@ -72,7 +72,8 @@ def calculate_distance_between_points(dict_met_punten1, dict_met_punten2):
 
     for peilgebied_unieke_id in dict_met_punten2.keys():
         for punten in dict_met_punten2[peilgebied_unieke_id]:
-            punt_x, punt_y = punten.split(' ')
+            punt_x = float(punten.split(' ')[0])
+            punt_y = float(punten.split(' ')[1])
             peilgebied_spl = peilgebied_unieke_id.split('__')
             peilgebied = peilgebied_spl[0]
             peilgebieduniekeiddeel = peilgebied_spl[1]
@@ -125,7 +126,8 @@ def create_points_from_dict(gp, dict1, output_file, field_id):
             i += 1
             key_pnt = str(key) + "__" + str(i)
             #coordinaten staan er altijd in met spatie ertussen
-            point.X, point.Y = coordinate.split(' ')
+            point.X = float(coordinate.split(' ')[0])
+            point.Y = float(coordinate.split(' ')[1])
             newfeature = rows_ic.NewRow()
             newfeature.shape = point
             newfeature.SetValue(field_id, key_pnt)
@@ -191,7 +193,8 @@ def createLineFromPoints(gp, dict_with_points, leidingidkolom, outputfile):
     rows_ic = gp.InsertCursor(outputfile)
     for key in dict_with_points.iterkeys():
         for item in dict_with_points[key]:
-            point.X, point.Y = item.split(' ')
+            point.X = float(item.split(' ')[0])
+            point.Y = float(item.split(' ')[1])
             linearray.Add(point)
             newfeature = rows_ic.NewRow()
         newfeature.shape = linearray

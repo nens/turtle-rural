@@ -161,7 +161,6 @@ def main():
                     total_crop_area += (float(row.GetValue(crop_field)))
                                         
                 percentage = correct_onvland_ha / total_crop_area
-                log.info(percentage)
                 for crop_field in crop_fields:
                     original_ha = float(row.GetValue(crop_field))
                     new_ha = original_ha * percentage

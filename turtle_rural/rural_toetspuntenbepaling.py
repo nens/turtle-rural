@@ -11,7 +11,6 @@ from turtlebase import mainutils
 import nens.gp
 import turtlebase.arcgis
 import turtlebase.spatial
-import turtlebase.general
 
 log = logging.getLogger(__name__)
 

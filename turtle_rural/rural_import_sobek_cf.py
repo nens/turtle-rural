@@ -10,7 +10,6 @@ from turtlebase.logutils import LoggingConfig
 from turtlebase import mainutils
 import nens.gp
 import turtlebase.arcgis
-import turtlebase.general
 
 log = logging.getLogger(__name__)
 
@@ -31,11 +30,6 @@ def main():
 
         if not os.path.isdir(workspace):
             os.makedirs(workspace)
-        #workspace_gdb, errorcode = turtlebase.arcgis.create_temp_geodatabase(
-        #                                gp, workspace)
-        #if errorcode == 1:
-        #    log.error("failed to create a file geodatabase in %s" % workspace)
-
         #---------------------------------------------------------------------
         # Input parameters
         """
