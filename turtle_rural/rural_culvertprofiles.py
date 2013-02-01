@@ -1,29 +1,5 @@
-#!/usr/bin/python
+# (c) Nelen & Schuurmans. GPL licensed, see LICENSE.txt
 # -*- coding: utf-8 -*-
-#******************************************************************************
-#
-# This script is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This script is distributed in the hope that it will be useful, but
-# WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-# General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this script.  If not, see <http://www.gnu.org/licenses/>.
-#
-# Copyright 2011 Nelen & Schuurmans
-#
-#******************************************************************************
-#
-# Initial programmer: Mario Frasca
-# Initial date:       2011-10-27
-# $Id: script.py 25303 2011-11-17 08:46:12Z mario.frasca $
-#
-#******************************************************************************
 
 from nens.gp import parse_arguments
 import os
@@ -91,13 +67,10 @@ def do_form(value):
 
 def main(options=None, args=None):
     from turtlebase import mainutils
-    from turtlebase.logutils import LoggingConfig
-
+    
     log = logging.getLogger(__name__)
     gp = mainutils.create_geoprocessor()
-    config = mainutils.read_config(__file__, 'turtle-settings.ini')
-    logfile = mainutils.log_filename(config)
-    logging_config = LoggingConfig(gp, logfile=logfile)
+    
     mainutils.log_header(__name__)
 
     if options is args is None:

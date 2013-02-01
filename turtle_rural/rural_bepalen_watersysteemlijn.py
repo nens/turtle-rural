@@ -3,16 +3,12 @@
 
 import logging
 import sys
-import os
 import traceback
 from math import log as ln
 import csv
 
 from turtlebase.logutils import LoggingConfig
 from turtlebase import mainutils
-import nens.gp
-import turtlebase.arcgis
-import turtlebase.filenames
 import turtlebase.general
 
 logger = logging.getLogger(__name__)
@@ -64,11 +60,7 @@ def main():
 
         #per id a set of coordinates will be set
         #the x value comes from columnname (they are a fixed number) in Gumbel distribution, the y value is the value in the table
-        data = {}
-
-        logger.info("Indexing input file...")
-        idx_id = -1
-        fields = [] #store dictionaries with 'index' and 'value'
+        logger.info("Indexing input file")
 
         #indexing: find all columns and store their index
         gpgident = config.get('GENERAL', 'gpgident')

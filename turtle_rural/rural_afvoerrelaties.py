@@ -10,7 +10,6 @@ from turtlebase.logutils import LoggingConfig
 from turtlebase import mainutils
 import nens.gp
 import turtlebase.arcgis
-import turtlebase.general
 
 log = logging.getLogger(__name__)
 
@@ -63,11 +62,12 @@ def add_centroids(gp, input_polygon):
     if not turtlebase.arcgis.is_fieldname(gp, input_polygon, "POINT_Y"):
         gp.AddField(input_polygon, "POINT_Y", "Double")
 
+    in_desc = gp.describe(input_polygon)
     row = gp.UpdateCursor(input_polygon)
     for item in nens.gp.gp_iterator(row):
-        xy = item.Shape.Centroid.split(" ")
-        x = float(xy[0])
-        y = float(xy[1])
+        feat = item.GetValue(in_desc.ShapeFieldName)
+        x, y = turtlebase.arcgis.calculate_xy(gp, feat.Centroid)
+        
         # wegschrijven naar veld
         item.setValue('POINT_X', x)
         item.setValue('POINT_Y', y)
