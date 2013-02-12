@@ -87,14 +87,21 @@ def get_array_from_grid(mask_fc, mapsheet, input_grid, extent, workspace, NODATA
     
     return output_array
 
+def reclassify_conversion(conversion):
+    r_conv = np.zeros(max(conversion.keys()) + 1, dtype=np.uint16)
+    r_conv[conversion.keys()] = conversion.values()
+                        
+    return r_conv
 
 def reclassify_array(array, conversion, NODATA=-9999):
     """
     """
+    c = reclassify_conversion(conversion)
     nbw_array = np.ones(array.shape) * NODATA
     
-    for k, v in conversion.items():
-        nbw_array[array == k] = v
+    nbw_array = c[array]
+    #for k, v in conversion.items():
+    #    nbw_array[array == k] = v
          
     return nbw_array
     
