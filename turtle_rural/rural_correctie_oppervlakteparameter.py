@@ -7,7 +7,6 @@ import traceback
 
 from turtlebase.logutils import LoggingConfig
 from turtlebase import mainutils
-import nens.gp
 import turtlebase.arcgis
 
 log = logging.getLogger(__name__)

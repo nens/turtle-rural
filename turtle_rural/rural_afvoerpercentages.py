@@ -9,8 +9,6 @@ from turtlebase.logutils import LoggingConfig
 from turtlebase import mainutils
 import nens.gp
 import turtlebase.arcgis
-import turtlebase.filenames
-import turtlebase.general
 
 log = logging.getLogger(__name__)
 

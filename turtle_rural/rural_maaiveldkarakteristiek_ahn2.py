@@ -7,6 +7,7 @@ import os
 import shutil
 import math
 import traceback
+import tempfile
 
 from turtlebase.logutils import LoggingConfig
 from turtlebase import mainutils
@@ -72,6 +73,8 @@ def main():
         #---------------------------------------------------------------------
         # Create workspace
         workspace = os.path.join(config.get('GENERAL', 'location_temp'))
+        if workspace == "-":
+            workspace = tempfile.gettempdir()
         workspace_folder = turtlebase.arcgis.get_random_layer_name()
         workspace_shp = os.path.join(workspace, workspace_folder)
         os.makedirs(workspace_shp)

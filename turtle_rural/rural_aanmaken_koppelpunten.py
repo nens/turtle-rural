@@ -6,6 +6,7 @@ import sys
 import os
 import logging
 import traceback
+import tempfile
 import math
 
 # Import GIS modules
@@ -223,6 +224,9 @@ def main():
         #----------------------------------------------------------------------------------------
         # Create workspace
         workspace = config.get('GENERAL', 'location_temp')
+        if workspace == "-":
+            workspace = tempfile.gettempdir()
+                        
         turtlebase.arcgis.delete_old_workspace_gdb(gp, workspace)
 
         if not os.path.isdir(workspace):

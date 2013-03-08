@@ -5,6 +5,7 @@ import logging
 import sys
 import os
 import traceback
+import tempfile
 
 from turtlebase.logutils import LoggingConfig
 from turtlebase import mainutils
@@ -12,7 +13,6 @@ import nens.gp
 import turtlebase.arcgis
 import turtlebase.spatial
 import turtlebase.voronoi
-import turtlebase.general
 
 log = logging.getLogger(__name__)
 
@@ -76,6 +76,8 @@ def main():
         #---------------------------------------------------------------------
         # Create workspace
         workspace = config.get('GENERAL', 'location_temp')
+        if workspace == "-":
+            workspace = tempfile.gettempdir()
 
         turtlebase.arcgis.delete_old_workspace_gdb(gp, workspace)
 
@@ -98,7 +100,6 @@ def main():
             output_result_table = sys.argv[6]
 
             # optional output
-            temprasters = []
             output_inundation = sys.argv[7]
             if output_inundation == "#":
                 output_inundation = os.path.join(workspace_gdb, "inun_nbw")

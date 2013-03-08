@@ -7,12 +7,12 @@ import shutil
 import os
 import csv
 import traceback
+import tempfile
 
 from turtlebase.logutils import LoggingConfig
 from turtlebase import mainutils
 import nens.gp
 import turtlebase.arcgis
-import turtlebase.general
 
 log = logging.getLogger(__name__)
 
@@ -27,7 +27,7 @@ def main():
         #----------------------------------------------------------------------------------------
         #check inputfields
         log.info("Getting commandline parameters... ")
-        use_onderbemalingen = False
+        #use_onderbemalingen = False
         if len(sys.argv) == 6:
             input_peilgebiedgegevens = sys.argv[1]
             input_toetspunten = sys.argv[2]
@@ -56,6 +56,8 @@ def main():
         #----------------------------------------------------------------------------------------
         # Create workspace
         workspace = config.get('GENERAL','location_temp')
+        if workspace == "-":
+            workspace = tempfile.gettempdir()
 
         turtlebase.arcgis.delete_old_workspace_gdb(gp, workspace)
 

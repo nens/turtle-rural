@@ -5,13 +5,12 @@ import logging
 import sys
 import os
 import traceback
+import tempfile
 
 from turtlebase.logutils import LoggingConfig
 from turtlebase import mainutils
 import nens.gp
 import turtlebase.arcgis
-import turtlebase.filenames
-import turtlebase.general
 
 log = logging.getLogger(__name__)
 
@@ -44,13 +43,13 @@ gpg_afvoerendoppervlak = config.get('afvoerendoppervlak', 'gpg_afvoerendoppervla
 gpg_afvoercap_ha = config.get('afvoerendoppervlak', 'gpg_afvoercap_ha')
 
 
-def calc_afv_opp_rec (gpg_ident, kwk_base, oppervlak_data, afvoer_data, pg_data_output, pg_passed, pg_route, pg_loops):
+def calc_afv_opp_rec(gpg_ident, kwk_base, oppervlak_data, afvoer_data, pg_data_output, pg_passed, pg_route, pg_loops):
     '''
     calculate afvoerend oppervlak in a recursive way; handles cycles as well
     '''
     try:
         #the afvoerend opp has already been calculated for this pg
-        pg_passed[value[afvoer_van]][kwk_base] = 1 # if this doesn't work, the key value[ini['afvoer_van']] does not exist and we go the the except part
+        pg_passed[gpgident][kwk_base] = 1 # if this doesn't work, the key value[ini['afvoer_van']] does not exist and we go the the except part
         return pg_data_output[gpg_ident][gpg_afvoerendoppervlak]
     except:
         log.debug(" summing for " + gpg_ident)

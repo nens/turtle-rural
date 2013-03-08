@@ -10,7 +10,6 @@ from turtlebase.logutils import LoggingConfig
 from turtlebase import mainutils
 import nens.gp
 import turtlebase.arcgis
-import turtlebase.general
 
 log = logging.getLogger(__name__)
 
@@ -37,13 +36,9 @@ def sort_bodemsoorten(gp, intersect_bodem, gafident):
     bodem_table = nens.gp.get_table(gp, intersect_bodem)
     #log.info(bodem_table)
 
-
 def weighted_average_seepage(kwelwegzijging, gafident):
     """
     """
-
-
-
 
 def translate_soiltypes(bod1_int, bod2_int, bod3_int):
     """

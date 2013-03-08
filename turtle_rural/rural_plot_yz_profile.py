@@ -4,7 +4,7 @@
 import logging
 import sys
 import os
-import csv
+import tempfile
 import traceback
 
 from turtlebase.logutils import LoggingConfig
@@ -28,6 +28,8 @@ def main():
         #---------------------------------------------------------------------
         # Create workspace
         workspace = config.get('GENERAL', 'location_temp')
+        if workspace == "-":
+            workspace = tempfile.gettempdir()
 
         turtlebase.arcgis.delete_old_workspace_gdb(gp, workspace)
 
@@ -58,7 +60,7 @@ def main():
 
         #<check required fields from input data,
         #        append them to list if missing>
-        check_fields = {input_yz: ['proident', "xcoord", "ycoord", "target_lvl", "water_lvl", "dist_mid", "bed_lvl"]}
+        check_fields = {input_yz: ['proident', "xcoord", "ycoord", "target_lvl", "water_lvl", "dist_mid", "bed_lvl", "bed_lvl_s"]}
         for input_fc, fieldnames in check_fields.items():
             for fieldname in fieldnames:
                 if not turtlebase.arcgis.is_fieldname(
@@ -98,9 +100,9 @@ def main():
                 turtlebase.general.add_to_csv(output_file, [('Streefpeil:         ', item.GetValue('TARGET_LVL'))], "ab")
                 turtlebase.general.add_to_csv(output_file, [('Gemeten waterstand: ', item.GetValue('WATER_LVL'))], "ab")
                 turtlebase.general.add_to_csv(output_file, [('')], "ab")
-                turtlebase.general.add_to_csv(output_file, [('Afstand tot midden (m)', 'Hoogte (m NAP)')], "ab")
+                turtlebase.general.add_to_csv(output_file, [('Afstand tot midden (m)', 'Hoogte (m NAP)', "Hoogte zachte bodem (m NAP)")], "ab")
             try:
-                turtlebase.general.add_to_csv(output_file, [(round(item.GetValue('DIST_MID'), 2), round(item.GetValue('BED_LVL'), 2))], "ab")
+                turtlebase.general.add_to_csv(output_file, [(round(item.GetValue('DIST_MID'), 2), round(item.GetValue('BED_LVL'), 2), round(item.GetValue('BED_LVL_S'), 2))], "ab")
             except:
                 continue
 

@@ -5,6 +5,7 @@ import logging
 import sys
 import os
 import traceback
+import tempfile
 
 from turtlebase.logutils import LoggingConfig
 from turtlebase import mainutils
@@ -135,18 +136,18 @@ def sort_pointcloud(gp, centerpoints_d, lineparts, pointcloud):
             pc = pointcloud[centerpoint_id]
 
             try:
-                sorted = nens.geom.sort_perpendicular_to_segment(ls, pc)
+                sorted_points = nens.geom.sort_perpendicular_to_segment(ls, pc)
             except:
                 log.warning("No intersection found, profile %s skipped",
                             centerpoint_id)
                 continue
-            profiles_xyz[centerpoint_id] = sorted
+            profiles_xyz[centerpoint_id] = sorted_points
 
             sum_x = 0
             sum_y = 0
             cnt_x = 0
             cnt_y = 0
-            for coords in sorted:
+            for coords in sorted_points:
                 sum_x += float(coords[0])
                 cnt_x += 1
                 sum_y += float(coords[1])
@@ -155,7 +156,7 @@ def sort_pointcloud(gp, centerpoints_d, lineparts, pointcloud):
             avg_x = sum_x / cnt_x
             avg_y = sum_y / cnt_y
 
-            abscissas = zip(nens.geom.abscissa_from_midsegment(sorted), sorted)
+            abscissas = zip(nens.geom.abscissa_from_midsegment(sorted_points), sorted_points)
             log.debug("abscissas %s" % abscissas)
 
             for index, x in enumerate(abscissas):
@@ -250,6 +251,8 @@ def main():
         #---------------------------------------------------------------------
         # Create workspace
         workspace = config.get('GENERAL', 'location_temp')
+        if workspace == "-":
+            workspace = tempfile.gettempdir()
 
         turtlebase.arcgis.delete_old_workspace_gdb(gp, workspace)
 
@@ -291,7 +294,7 @@ def main():
         #---------------------------------------------------------------------
         ovkident = 'ovkident'
         proident = 'proident'
-        zcoord = 'zcoord'
+        zcoord = 'ZH'
         # Check required fields in input data
         log.info("Check required fields in input data")
 

@@ -7,13 +7,13 @@ import os
 import csv
 import traceback
 import time
+import tempfile
 
 from turtlebase.logutils import LoggingConfig
 from turtlebase import mainutils
 import nens.gp
 import turtlebase.arcgis
 import turtlebase.risico
-import turtlebase.general
 
 log = logging.getLogger(__name__)
 
@@ -29,6 +29,8 @@ def main():
         #----------------------------------------------------------------------------------------
         # Create workspace
         workspace = config.get('GENERAL', 'location_temp')
+        if workspace == "-":
+            workspace = tempfile.gettempdir()
         turtlebase.arcgis.delete_old_workspace_gdb(gp, workspace)
 
         if not os.path.isdir(workspace):

@@ -20,12 +20,12 @@ pool = {}
 nens.sobek.max_decimal_digits = 7
 
 
-def getConfig(input):
+def getConfig(inp):
     """gets the name of a windows INI file and reads the file into a ConfigParser.ConfigParser instance
     """
 
     config = ConfigParser()
-    config.readfp(input)
+    config.readfp(inp)
     return config
 
 ## the function add_to_output adds an object to the result pool, if
