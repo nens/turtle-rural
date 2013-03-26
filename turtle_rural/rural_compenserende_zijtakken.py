@@ -298,6 +298,7 @@ def main():
         workspace = config.get('GENERAL', 'location_temp')
         if workspace == "-":
             workspace = tempfile.gettempdir()
+        log.info("workspace: %s" % workspace)
 
         turtlebase.arcgis.delete_old_workspace_gdb(gp, workspace)
 

@@ -285,7 +285,10 @@ def main():
             value_lgn_id = int(value_gridcode)
             value_peilgeb_area = float(row.shape.Area) / 10000 #Area is in m2
             
-            gewastype = conversion[value_lgn_id]['gewastype']
+            if 'gewastype' in conversion[value_lgn_id]:
+                gewastype = conversion[value_lgn_id]['gewastype']
+            else:
+                gewastype = 1
             #add to area
             if output_with_area.has_key(value_gpgident):
                 add_to_area, gewastype_ha, error = conv_ha(conversion, value_lgn_id, float(value_peilgeb_area), gewastype)

@@ -5,7 +5,6 @@ import logging
 import sys
 import os
 import traceback
-import tempfile
 
 from turtlebase.logutils import LoggingConfig
 from turtlebase import mainutils
@@ -27,6 +26,7 @@ def main():
         # Create workspace
         workspace = config.get('GENERAL', 'location_temp')
         if workspace == "-":
+            import tempfile
             workspace = tempfile.gettempdir()
 
         turtlebase.arcgis.delete_old_workspace_gdb(gp, workspace)
@@ -74,15 +74,20 @@ def main():
         if not turtlebase.arcgis.is_fieldname(gp, a_watergang, ovkident):
             log.error("missing fields in input data: %s" % ovkident)
             sys.exit(2)
+        
+        bc_watergang_tmp = turtlebase.arcgis.get_random_file_name(workspace_gdb)
+        gp.Select_analysis(bc_watergang, bc_watergang_tmp)
+        if turtlebase.arcgis.is_fieldname(gp, bc_watergang_tmp, ovkident):
+            gp.DeleteField_management(bc_watergang_tmp, ovkident)
 
         #---------------------------------------------------------------------
         # Environments
         G = nx.Graph()
         
         # iterate through your feature class and build a graph
-        rows = gp.SearchCursor(bc_watergang)
+        rows = gp.SearchCursor(bc_watergang_tmp)
         row = rows.next()
-        inDesc = gp.describe(bc_watergang)
+        inDesc = gp.describe(bc_watergang_tmp)
         while row:
             # we need a unique representation for each edges start and end points
             feat = row.GetValue(inDesc.ShapeFieldName)
@@ -127,14 +132,14 @@ def main():
         
         temp_fc = turtlebase.arcgis.get_random_file_name(workspace, ".shp")
         tempfiles.append(temp_fc)
-        gp.SpatialJoin_analysis(bc_watergang, point_fc, temp_fc,"JOIN_ONE_TO_ONE")
+        gp.SpatialJoin_analysis(bc_watergang_tmp, point_fc, temp_fc,"JOIN_ONE_TO_ONE")
         
         output_fc_line = turtlebase.arcgis.get_random_file_name(workspace, ".shp")
         tempfiles.append(output_fc_line)
         gp.Dissolve_management(temp_fc,output_fc_line,ovkident,"#","MULTI_PART","DISSOLVE_LINES")
         
         gp.merge_management("%s;%s"% (a_watergang, output_fc_line), output_fc)
-        gp.Intersect_analysis("%s #;%s #" % (a_watergang, bc_watergang), point_intersection,"ALL","#","POINT")
+        gp.Intersect_analysis("%s #;%s #" % (a_watergang, bc_watergang_tmp), point_intersection,"ALL","#","POINT")
                 
         #---------------------------------------------------------------------
         # Delete temporary workspace geodatabase & ascii files
