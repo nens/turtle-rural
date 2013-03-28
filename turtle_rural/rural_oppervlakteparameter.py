@@ -130,6 +130,7 @@ def main():
         workspace = config.get('GENERAL', 'location_temp')
         if workspace == "-":
             workspace = tempfile.gettempdir()
+            log.info("location temp: %s" % workspace)
 
         turtlebase.arcgis.delete_old_workspace_gdb(gp, workspace)
 
@@ -234,8 +235,8 @@ def main():
 
         # 2b) intersect(lgn+peilgebieden)
         log.info("B) Intersect lgn_shape + tempfile_peilgebied -> lgn_peilgebieden")
-        intersect_temp = turtlebase.arcgis.get_random_file_name(workspace_gdb)
-        gp.Intersect_analysis("%s;%s" % (temp_lgn_fc, peilgebieden_temp), intersect_temp)
+        intersect_temp = os.path.join(workspace_gdb, 'intersect_lgn_gpg')
+        gp.Union_analysis("%s;%s" % (temp_lgn_fc, peilgebieden_temp), intersect_temp)
 
         # 3a) Read conversiontable into memory"
         log.info("C-1) Read conversiontable into memory")
@@ -281,7 +282,20 @@ def main():
         rows = gp.UpdateCursor(intersect_temp)
         for row in nens.gp.gp_iterator(rows):
             value_gpgident = row.GetValue(gpgident)
+            if value_gpgident == "":
+                continue
             value_gridcode = row.GetValue(gridcode)
+            if value_gridcode == 0:
+                if value_gpgident in output_with_area:
+                    output_with_area[value_gpgident][hectares] += float(row.shape.Area) / 10000
+                else:
+                    output_with_area[value_gpgident] = {gpgident : value_gpgident}
+                    if hectares in output_with_area[value_gpgident]:
+                        output_with_area[value_gpgident][hectares] = float(row.shape.Area) / 10000
+                    else:
+                        output_with_area[value_gpgident] = {hectares: float(row.shape.Area) / 10000}
+                continue
+                    
             value_lgn_id = int(value_gridcode)
             value_peilgeb_area = float(row.shape.Area) / 10000 #Area is in m2
             
@@ -290,14 +304,17 @@ def main():
             else:
                 gewastype = 1
             #add to area
-            if output_with_area.has_key(value_gpgident):
+            if value_gpgident in output_with_area:
                 add_to_area, gewastype_ha, error = conv_ha(conversion, value_lgn_id, float(value_peilgeb_area), gewastype)
                 for key in add_to_area.keys(): #all relevant keys
-                    output_with_area[value_gpgident][key] = float(output_with_area[value_gpgident][key]) + float(add_to_area[key])
+                    if key in output_with_area[value_gpgident]:
+                        output_with_area[value_gpgident][key] += float(add_to_area[key])
+                    else:
+                        output_with_area[value_gpgident][key] = float(add_to_area[key])
             else:
                 output_with_area[value_gpgident], gewastype_ha, error = conv_ha(conversion, value_lgn_id, float(value_peilgeb_area), gewastype)
                 output_with_area[value_gpgident][gpgident] = value_gpgident #set GPGIDENT
-                if error and not(unknown_lgn_codes.has_key(value_lgn_id)):
+                if error and not(value_lgn_id in unknown_lgn_codes):
                     log.warning(" - Warning: lgncode " + str(value_lgn_id) + " not known (check conversiontable)")
                     unknown_lgn_codes[value_lgn_id] = 1
             
@@ -332,7 +349,7 @@ def main():
             for row in nens.gp.gp_iterator(rows):
                 water_area_ha = float(row.shape.Area) / 10000 #Area is in m2
                 peilgebied_id = row.GetValue(gpgident)
-                if watershape_areas.has_key(peilgebied_id):
+                if peilgebied_id in watershape_areas:
                     subtotal_area = watershape_areas[peilgebied_id]['area']
                     #overwrite key with sum areas
                     watershape_areas[peilgebied_id] = {'area': subtotal_area + water_area_ha}
@@ -341,7 +358,7 @@ def main():
                     watershape_areas[peilgebied_id] = {'area': water_area_ha}
             #update outputtable
             for peilgebied_id in output_with_area.keys():
-                if watershape_areas.has_key(peilgebied_id):
+                if peilgebied_id in watershape_areas:
                     output_with_area[peilgebied_id]['OPNWT_GBKN'] = watershape_areas[peilgebied_id]['area']
                     output_with_area[peilgebied_id]['GBKN_DATE'] = date_str
                     output_with_area[peilgebied_id]['GBKN_SOURCE'] = source_watershape
@@ -377,7 +394,7 @@ def main():
         #check if output_table has the correct rows
         log.info("Checking fields...")
         for field_name, field_settings in areaFields.items():
-            if field_settings.has_key('length'):
+            if 'length' in field_settings:
                 if not turtlebase.arcgis.is_fieldname(gp, output_table, field_name):
                     gp.AddField(output_table, field_name, field_settings['type'], '#', '#', field_settings['length'])
             else:
@@ -427,7 +444,7 @@ def main():
             #check if output_table has the correct rows
             log.info("Checking fields...")
             for field_name, field_settings in cropFields.items():
-                if field_settings.has_key('length'):
+                if 'length' in field_settings:
                     if not turtlebase.arcgis.is_fieldname(gp, output_crop_table, field_name):
                         gp.AddField(output_crop_table, field_name, field_settings['type'], '#', '#', field_settings['length'])
                 else:

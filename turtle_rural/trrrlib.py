@@ -617,8 +617,12 @@ class OnverhardLand(Onverhard):
         kwargs.setdefault('id', peilgebied['id'] + '_ur')
         self.__super.__init__(peilgebied, **kwargs)
         self['ycoord'] += 25
+        if not 'grass_area' in peilgebied:
+            grass_area = float(peilgebied['OnverhardLand_area'])
+        else:
+            grass_area = float(peilgebied['grass_area'])
         self.update({
-                'area_grass': int(float(peilgebied['grass_area']) * 10000),
+                'area_grass': int(grass_area * 10000),
                 'area_corn': int(float(peilgebied['corn_area']) * 10000),
                 'area_potato': int(float(peilgebied['potatoes_area']) * 10000),
                 'area_beet': int(float(peilgebied['sugarbeet_area']) * 10000),
@@ -654,6 +658,10 @@ class OnverhardSted(Onverhard):
         kwargs.setdefault('id', peilgebied['id'] + '_uu')
         self.__super.__init__(peilgebied, **kwargs)
         self['ycoord'] -= 25
+        if not 'nonarable_land_area' in peilgebied:
+            non_arab = float(peilgebied['onverhardsted_area'])
+        else:
+            non_arab = float(peilgebied['nonarable_land_area'])
         self.update({
                 'area_grass': 0,
                 'area_corn': 0,
@@ -661,7 +669,7 @@ class OnverhardSted(Onverhard):
                 'area_beet': 0,
                 'area_grain': 0,
                 'area_misc': 0,
-                'area_nonarab': int(float(peilgebied['nonarable_land_area']) * 10000),
+                'area_nonarab': int(non_arab * 10000),
                 'area_greenhouse': 0,
                 'area_orchard': 0,
                 'area_bulbous': 0,
@@ -1313,6 +1321,7 @@ def main(options, args):
                                                'onverhardsted_area': 0.0,
                                                'onverhardland_area': 0.0,
                                                'kas_area': 0.0,
+                                               
                                                })
 
         for peilgebied in peilgebieden:

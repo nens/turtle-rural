@@ -132,7 +132,7 @@ def main():
 
             elif record_count == 1:
                 log.debug(" - 1 watergang in peilgebied, opknippen dus niet nodig, kopieer gpg")
-                output_spatial_join = os.path.join(workspace, "voronoi_work", "out_sj_%s" % counter)
+                output_spatial_join = os.path.join(workspace, "voronoi_work", "out_sj_%s.shp" % counter)
 
                 gp.SpatialJoin_analysis(huidig_peilgebied_lyr, huidige_waterlijn_lyr, output_spatial_join)
                 polygon_list.append(output_spatial_join)
@@ -143,7 +143,7 @@ def main():
         #----------------------------------------------------------------------------------------
         # Merge all polygons together
         merge_str = ";".join(polygon_list)
-
+        
         fieldmappings = gp.createobject("FieldMappings")
         fldmap_OVK_ID = gp.createobject("FieldMap")
 
