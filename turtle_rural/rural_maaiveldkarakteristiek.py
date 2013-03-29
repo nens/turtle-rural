@@ -5,7 +5,6 @@ import logging
 import sys
 import os
 import traceback
-import tempfile
 
 from turtlebase.logutils import LoggingConfig
 from turtlebase import mainutils
@@ -88,6 +87,7 @@ def main():
         # Create workspace
         workspace = config.get('GENERAL', 'location_temp')
         if workspace == "-":
+            import tempfile
             workspace = tempfile.gettempdir()
         log.info("workspace: %s" % workspace)
 
