@@ -90,11 +90,11 @@ def conv_ha(conversion, lgn_id, ha, gewastype):
     output: dictionary with 6 keys
     '''
     if lgn_id in conversion:
-        verhard = ha * float(conversion[lgn_id]['verhard_ha'])
-        onvsted = ha * float(conversion[lgn_id]['onvsted_ha'])
-        kassen = ha * float(conversion[lgn_id]['kassen_ha'])
-        onvland = ha * float(conversion[lgn_id]['onvland_ha'])
-        openwat = ha * float(conversion[lgn_id]['openwat_ha'])
+        verhard = ha * float(str(conversion[lgn_id]['verhard_ha']).replace(",", "."))
+        onvsted = ha * float(str(conversion[lgn_id]['onvsted_ha']).replace(",", "."))
+        kassen = ha * float(str(conversion[lgn_id]['kassen_ha']).replace(",", "."))
+        onvland = ha * float(str(conversion[lgn_id]['onvland_ha']).replace(",", "."))
+        openwat = ha * float(str(conversion[lgn_id]['openwat_ha']).replace(",", "."))
         if gewastype == 7:
             gewastype_ha = onvsted
         else:

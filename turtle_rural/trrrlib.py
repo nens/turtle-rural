@@ -1056,7 +1056,7 @@ class Stuw(Kunstwerk):
         log.debug('bovenstroomsknoop hoort bij peilgebied %s' % bn['peilgebied']['id'])
         bspg = bn['peilgebied']
         self['maxpeil'] = bspg['maxpeil']
-        log.debug('Als ik na deze regel  crash, dan betekent dat dat je de volgende kolommen met een defaultwaarde moet invullen: %r %r %r' % (bspg['AFVCAPHA'], bspg['TOTAFVOPPERVLAK'], self['deelVanAfvoer']))
+        log.debug('Als ik na deze regel crash, dan betekent dat dat je de volgende kolommen met een defaultwaarde moet invullen: %r %r %r' % (bspg['AFVCAPHA'], bspg['TOTAFVOPPERVLAK'], self['deelVanAfvoer']))
         self['maxflow'] = (bspg['AFVCAPHA'] * bspg['TOTAFVOPPERVLAK'] * self['deelVanAfvoer'] / 100) / 3600
         self['p_mf2'] = 10 * self['maxflow']
 

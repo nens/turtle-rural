@@ -91,7 +91,7 @@ def main():
 
         #extract channels within polygon
         intersect_waterlijn = turtlebase.arcgis.get_random_file_name(workspace_gdb)
-        gp.Intersect_analysis(input_polygon_fc + ";" + input_channel_fc, intersect_waterlijn)
+        gp.Intersect_analysis([input_polygon_fc, input_channel_fc], intersect_waterlijn)
 
         polygon_list = []
         if not os.path.isdir(os.path.join(workspace, "voronoi_work")):
