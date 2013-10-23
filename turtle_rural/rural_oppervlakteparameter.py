@@ -289,11 +289,7 @@ def main():
                 if value_gpgident in output_with_area:
                     output_with_area[value_gpgident][hectares] += float(row.shape.Area) / 10000
                 else:
-                    output_with_area[value_gpgident] = {gpgident : value_gpgident}
-                    if hectares in output_with_area[value_gpgident]:
-                        output_with_area[value_gpgident][hectares] = float(row.shape.Area) / 10000
-                    else:
-                        output_with_area[value_gpgident] = {hectares: float(row.shape.Area) / 10000}
+                    output_with_area[value_gpgident] = {gpgident : value_gpgident, hectares : float(row.shape.Area) / 10000}
                 continue
                     
             value_lgn_id = int(value_gridcode)
